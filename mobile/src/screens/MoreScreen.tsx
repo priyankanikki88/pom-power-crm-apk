@@ -9,7 +9,7 @@ import { useOutbox } from '../lib/outbox';
 import { useUnreadNotifications } from './NotificationsScreen';
 import { colors, space } from '../theme';
 
-const APP_VERSION = '1.3.0';
+const APP_VERSION = '1.4.0';
 
 /** Profile and sign-out. Administration stays on the web CRM by design — this app is for sales and service work. */
 export function MoreScreen({ navigation }: NativeStackScreenProps<MoreStackParams, 'MoreHome'>) {
@@ -65,6 +65,11 @@ export function MoreScreen({ navigation }: NativeStackScreenProps<MoreStackParam
       <View style={styles.link}>
         <Button title="Tasks" variant="secondary" onPress={() => navigation.navigate('Tasks')} />
       </View>
+      {hasPermission('lead.read') ? (
+        <View style={styles.link}>
+          <Button title="Leads" variant="secondary" onPress={() => navigation.navigate('Leads')} />
+        </View>
+      ) : null}
       <View style={styles.link}>
         <Button title="My Expenses" variant="secondary" onPress={() => navigation.navigate('Expenses')} />
       </View>

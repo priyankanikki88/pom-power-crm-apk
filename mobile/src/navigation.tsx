@@ -18,6 +18,7 @@ import { FollowUpFormScreen } from './screens/FollowUpFormScreen';
 import { FollowUpsScreen } from './screens/FollowUpsScreen';
 import { HomeScreen } from './screens/HomeScreen';
 import { LoginScreen } from './screens/LoginScreen';
+import { LeadActivityFormScreen, LeadFormScreen, LeadsScreen } from './screens/LeadScreens';
 import { LeaveFormScreen, LeaveScreen } from './screens/LeaveScreens';
 import { MeetingDetailScreen, MeetingFormScreen, MeetingsScreen } from './screens/MeetingScreens';
 import { MoreScreen } from './screens/MoreScreen';
@@ -94,6 +95,11 @@ export type MoreStackParams = {
   /** `view` is the list the task was opened from (the detail reads it from that list). */
   TaskDetail: { id: string; view: TaskView; title: string };
   TaskForm: undefined;
+  Leads: undefined;
+  /** No id = add a lead. */
+  LeadForm: { id?: string } | undefined;
+  /** No id = schedule a new follow-up / event. */
+  LeadActivityForm: { id?: string } | undefined;
 };
 
 const Tabs = createBottomTabNavigator();
@@ -175,6 +181,9 @@ function MoreNavigator() {
       <MoreStack.Screen name="Tasks" component={TasksScreen} options={{ title: 'Tasks' }} />
       <MoreStack.Screen name="TaskDetail" component={TaskDetailScreen} options={{ title: 'Task' }} />
       <MoreStack.Screen name="TaskForm" component={TaskFormScreen} options={{ title: 'Give Tasks' }} />
+      <MoreStack.Screen name="Leads" component={LeadsScreen} options={{ title: 'Leads' }} />
+      <MoreStack.Screen name="LeadForm" component={LeadFormScreen} options={({ route }) => ({ title: route.params?.id ? 'Edit Lead' : 'Add Lead' })} />
+      <MoreStack.Screen name="LeadActivityForm" component={LeadActivityFormScreen} options={({ route }) => ({ title: route.params?.id ? 'Edit Activity' : 'Schedule Follow-up / Event' })} />
     </MoreStack.Navigator>
   );
 }
