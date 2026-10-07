@@ -1,0 +1,40 @@
+{
+  "expo": {
+    "name": "POM POWER CRM",
+    "slug": "pom-power-crm",
+    "version": "1.3.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "android": {
+      "package": "com.pompower.crm",
+      "versionCode": 15,
+      "adaptiveIcon": {
+        "backgroundColor": "#0f172a",
+        "foregroundImage": "./assets/android-icon-foreground.png",
+        "backgroundImage": "./assets/android-icon-background.png",
+        "monochromeImage": "./assets/android-icon-monochrome.png"
+      },
+      "predictiveBackGestureEnabled": false
+    },
+    "plugins": [
+      "expo-secure-store",
+      "expo-notifications",
+      "expo-sharing",
+      "@react-native-community/datetimepicker",
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "POM POWER CRM records where you are when you mark attendance."
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "cameraPermission": "POM POWER CRM uses the camera for site, service and expense-bill photos.",
+          "photosPermission": "POM POWER CRM lets you attach photos from your gallery to tickets, surveys and expenses."
+        }
+      ]
+    ]
+  }
+}
