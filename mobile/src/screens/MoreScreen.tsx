@@ -9,7 +9,7 @@ import { useOutbox } from '../lib/outbox';
 import { useUnreadNotifications } from './NotificationsScreen';
 import { colors, space } from '../theme';
 
-const APP_VERSION = '1.4.0';
+const APP_VERSION = '1.5.0';
 
 /** Profile and sign-out. Administration stays on the web CRM by design — this app is for sales and service work. */
 export function MoreScreen({ navigation }: NativeStackScreenProps<MoreStackParams, 'MoreHome'>) {
@@ -51,6 +51,22 @@ export function MoreScreen({ navigation }: NativeStackScreenProps<MoreStackParam
           <Button title={`Waiting to Send (${waiting.length})`} onPress={() => navigation.navigate('Outbox')} />
         </View>
       ) : null}
+      {/* A lead is the first thing captured, so it (and B2C, which follows a won lead) sits right at the top of More — matches the web CRM's sidebar order. */}
+      {hasPermission('lead.read') ? (
+        <View style={styles.link}>
+          <Button title="Leads" variant="secondary" onPress={() => navigation.navigate('Leads')} />
+        </View>
+      ) : null}
+      {hasPermission('discom.read') ? (
+        <View style={styles.link}>
+          <Button title="B2C Cases" variant="secondary" onPress={() => navigation.navigate('B2CCases')} />
+        </View>
+      ) : null}
+      {hasPermission('discom.read') ? (
+        <View style={styles.link}>
+          <Button title="Discom Master" variant="secondary" onPress={() => navigation.navigate('Discoms')} />
+        </View>
+      ) : null}
       <View style={styles.link}>
         <Button title="Attendance" variant="secondary" onPress={() => navigation.navigate('Attendance')} />
       </View>
@@ -65,11 +81,6 @@ export function MoreScreen({ navigation }: NativeStackScreenProps<MoreStackParam
       <View style={styles.link}>
         <Button title="Tasks" variant="secondary" onPress={() => navigation.navigate('Tasks')} />
       </View>
-      {hasPermission('lead.read') ? (
-        <View style={styles.link}>
-          <Button title="Leads" variant="secondary" onPress={() => navigation.navigate('Leads')} />
-        </View>
-      ) : null}
       <View style={styles.link}>
         <Button title="My Expenses" variant="secondary" onPress={() => navigation.navigate('Expenses')} />
       </View>

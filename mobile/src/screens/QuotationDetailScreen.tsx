@@ -16,8 +16,8 @@ import { colors, space } from '../theme';
 import type { PaymentStatus, QuotationDetail, SalesDoc } from '../types';
 
 /** Same status moves as the web CRM's quotation page. */
-const TRANSITIONS: Record<string, string[]> = { DRAFT: ['SENT', 'CANCELLED'], SENT: ['APPROVED', 'REJECTED', 'CANCELLED', 'EXPIRED'] };
-const ACTION_LABEL: Record<string, string> = { SENT: 'Mark as Sent', APPROVED: 'Customer Approved', REJECTED: 'Mark Lost (Customer Rejected)', CANCELLED: 'Cancel Quotation', EXPIRED: 'Mark Expired' };
+const TRANSITIONS: Record<string, string[]> = { DRAFT: ['SENT', 'CANCELLED'], SENT: ['NEGOTIATION', 'APPROVED', 'REJECTED', 'CANCELLED', 'EXPIRED'], NEGOTIATION: ['APPROVED', 'REJECTED', 'CANCELLED', 'EXPIRED'] };
+const ACTION_LABEL: Record<string, string> = { SENT: 'Mark as Sent', NEGOTIATION: 'In Negotiation', APPROVED: 'Customer Approved', REJECTED: 'Mark Lost (Customer Rejected)', CANCELLED: 'Cancel Quotation', EXPIRED: 'Mark Expired' };
 /** The same reasons the web CRM offers when a quotation is marked lost. */
 const LOST_REASONS = ['Price too high', 'Competitor selected', 'Project cancelled', 'Customer postponed', 'Product unavailable', 'Payment terms', 'Other'].map((r) => ({ value: r, label: r }));
 const isLive = (status: string) => status !== 'CANCELLED' && status !== 'REJECTED';

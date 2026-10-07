@@ -19,6 +19,7 @@ import { FollowUpsScreen } from './screens/FollowUpsScreen';
 import { HomeScreen } from './screens/HomeScreen';
 import { LoginScreen } from './screens/LoginScreen';
 import { LeadActivityFormScreen, LeadFormScreen, LeadsScreen } from './screens/LeadScreens';
+import { B2CCaseDetailScreen, B2CCaseFormScreen, B2CCasesScreen, DiscomFormScreen, DiscomsScreen } from './screens/DiscomScreens';
 import { LeaveFormScreen, LeaveScreen } from './screens/LeaveScreens';
 import { MeetingDetailScreen, MeetingFormScreen, MeetingsScreen } from './screens/MeetingScreens';
 import { MoreScreen } from './screens/MoreScreen';
@@ -100,6 +101,11 @@ export type MoreStackParams = {
   LeadForm: { id?: string } | undefined;
   /** No id = schedule a new follow-up / event. */
   LeadActivityForm: { id?: string } | undefined;
+  B2CCases: undefined;
+  B2CCaseForm: undefined;
+  B2CCaseDetail: { id: string; caseNo: string };
+  Discoms: undefined;
+  DiscomForm: undefined;
 };
 
 const Tabs = createBottomTabNavigator();
@@ -184,6 +190,11 @@ function MoreNavigator() {
       <MoreStack.Screen name="Leads" component={LeadsScreen} options={{ title: 'Leads' }} />
       <MoreStack.Screen name="LeadForm" component={LeadFormScreen} options={({ route }) => ({ title: route.params?.id ? 'Edit Lead' : 'Add Lead' })} />
       <MoreStack.Screen name="LeadActivityForm" component={LeadActivityFormScreen} options={({ route }) => ({ title: route.params?.id ? 'Edit Activity' : 'Schedule Follow-up / Event' })} />
+      <MoreStack.Screen name="B2CCases" component={B2CCasesScreen} options={{ title: 'B2C Cases' }} />
+      <MoreStack.Screen name="B2CCaseForm" component={B2CCaseFormScreen} options={{ title: 'Open a B2C Case' }} />
+      <MoreStack.Screen name="B2CCaseDetail" component={B2CCaseDetailScreen} options={({ route }) => ({ title: route.params.caseNo })} />
+      <MoreStack.Screen name="Discoms" component={DiscomsScreen} options={{ title: 'Discom Master' }} />
+      <MoreStack.Screen name="DiscomForm" component={DiscomFormScreen} options={{ title: 'Add Discom' }} />
     </MoreStack.Navigator>
   );
 }

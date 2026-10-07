@@ -18,7 +18,7 @@ const PAGE_SIZE = 25;
 export type DocKind = 'QUOTATION' | 'PROFORMA' | 'FORMAT4' | 'BILL';
 
 const KIND: Record<DocKind, { label: string; path: string; read: string[]; statuses: string[]; placeholder: string }> = {
-  QUOTATION: { label: 'Quotations', path: '/quotations', read: ['quotation.read', 'amc.read'], statuses: ['DRAFT', 'SENT', 'APPROVED', 'REJECTED', 'EXPIRED'], placeholder: 'Search quotation no., customer…' },
+  QUOTATION: { label: 'Quotations', path: '/quotations', read: ['quotation.read', 'amc.read'], statuses: ['DRAFT', 'SENT', 'NEGOTIATION', 'APPROVED', 'REJECTED', 'EXPIRED'], placeholder: 'Search quotation no., customer…' },
   PROFORMA: { label: 'Proforma', path: '/proforma-invoices', read: ['proforma.read', 'amc.read'], statuses: ['DRAFT', 'APPROVAL_PENDING', 'APPROVED', 'SENT', 'FINAL'], placeholder: 'Search proforma no., customer…' },
   FORMAT4: { label: 'Format-4', path: '/format4', read: ['format4.read', 'amc.read'], statuses: ['DRAFT', 'APPROVAL_PENDING', 'APPROVED', 'FINAL', 'REJECTED'], placeholder: 'Search Format-4 no., customer…' },
   BILL: { label: 'Bills', path: '/bills', read: ['bill.read'], statuses: ['DRAFT', 'FINAL', 'SENT', 'CANCELLED'], placeholder: 'Search bill no., customer…' },
