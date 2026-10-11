@@ -2,13 +2,13 @@
   "expo": {
     "name": "POM POWER CRM",
     "slug": "pom-power-crm",
-    "version": "1.6.0",
+    "version": "1.6.1",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
     "android": {
       "package": "com.pompower.crm",
-      "versionCode": 18,
+      "versionCode": 19,
       "adaptiveIcon": {
         "backgroundColor": "#0f172a",
         "foregroundImage": "./assets/android-icon-foreground.png",
@@ -33,6 +33,14 @@
         {
           "cameraPermission": "POM POWER CRM uses the camera for site, service and expense-bill photos, and to scan visiting cards.",
           "photosPermission": "POM POWER CRM lets you attach photos from your gallery to tickets, surveys and expenses."
+        }
+      ],
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "POM POWER CRM uses the camera to scan visiting cards.",
+          "recordAudioAndroid": false,
+          "barcodeScannerEnabled": false
         }
       ]
     ]

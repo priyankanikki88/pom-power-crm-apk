@@ -1,7 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useNavigation, type NavigationProp } from '@react-navigation/native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
-import * as ImagePicker from 'expo-image-picker';
 import { useLayoutEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, Alert, FlatList, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useAuth } from '../auth/AuthContext';
@@ -346,29 +345,20 @@ function LeadFormBody({ lead, onDone, canDelete, canTransfer }: { lead?: Lead; o
   const [transferring, setTransferring] = useState(false);
   const [toOwner, setToOwner] = useState<string | null>(null);
   const [reason, setReason] = useState('');
-  const [scanning, setScanning] = useState(false);
+  const navigation = useNavigation<NavigationProp<MoreStackParams>>();
   const owners = useQuery({ queryKey: ['leads', 'owners'], queryFn: () => api.get<Person[]>('/leads/owners'), enabled: transferring });
   const sourceOptions = options(lead && !SOURCES.includes(lead.source) ? [...SOURCES, lead.source] : SOURCES);
 
-  async function scanCard() {
+  function openCardScan() {
     setError(null);
-    try {
-      const permission = await ImagePicker.requestCameraPermissionsAsync();
-      if (!permission.granted) return setError('Camera permission was not given. Allow it in the phone settings to scan a card.');
-      const result = await ImagePicker.launchCameraAsync({ mediaTypes: 'images', quality: 0.8 });
-      if (result.canceled || !result.assets[0]) return;
-      setScanning(true);
-      const card = await scanBusinessCard(result.assets[0].uri);
-      if (card.name) setName(card.name);
-      if (card.company) setCompany(card.company);
-      if (card.phone) setPhone(card.phone);
-      if (card.email) setEmail(card.email);
-      if (!card.name && !card.company && !card.phone && !card.email) setError('Could not read the card clearly — try again with better light, or fill the details in by hand.');
-    } catch {
-      setError('Could not scan the card.');
-    } finally {
-      setScanning(false);
-    }
+    navigation.navigate('CardScan', {
+      onScanned: (card) => {
+        if (card.name) setName(card.name);
+        if (card.company) setCompany(card.company);
+        if (card.phones[0]) setPhone(card.phones[0].replace(/^\+91/, '').replace(/^\+/, ''));
+        if (card.emails[0]) setEmail(card.emails[0]);
+      },
+    });
   }
 
   const save = useMutation({
@@ -400,7 +390,7 @@ function LeadFormBody({ lead, onDone, canDelete, canTransfer }: { lead?: Lead; o
         {error ? <ErrorBox message={error} /> : null}
         {!lead ? (
           <View style={styles.gap}>
-            <Button title="Scan Visiting Card" variant="secondary" loading={scanning} disabled={scanning} onPress={() => void scanCard()} />
+            <Button title="Scan Visiting Card" variant="secondary" onPress={openCardScan} />
             <Text style={[text.muted, styles.hint]}>Reads the card on the phone, then fills in the fields below for you to check.</Text>
           </View>
         ) : null}
