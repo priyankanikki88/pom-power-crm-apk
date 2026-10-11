@@ -389,7 +389,7 @@ function LeadFormBody({ lead, onDone, canDelete, canTransfer }: { lead?: Lead; o
       <Card>
         {error ? <ErrorBox message={error} /> : null}
         {!lead ? (
-          <View style={styles.gap}>
+          <View style={styles.scanBlock}>
             <Button title="Scan Visiting Card" variant="secondary" onPress={openCardScan} />
             <Text style={[text.muted, styles.hint]}>Reads the card on the phone, then fills in the fields below for you to check.</Text>
           </View>
@@ -560,4 +560,5 @@ const styles = StyleSheet.create({
   fill: { height: 8, borderRadius: 999 },
   hint: { marginBottom: space.md },
   gap: { height: space.sm },
+  scanBlock: { marginBottom: space.md, gap: space.sm },
 });

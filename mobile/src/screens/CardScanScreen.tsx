@@ -2,6 +2,7 @@ import { CameraView, useCameraPermissions } from 'expo-camera';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useRef, useState } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Button } from '../components/ui';
 import { isCardEmpty, scanBusinessCard, type CardData } from '../lib/cardScan';
 import type { MoreStackParams } from '../navigation';
@@ -13,6 +14,7 @@ import { colors, space } from '../theme';
  * on the phone (no network) and hands the result back to whoever opened this screen.
  */
 export function CardScanScreen({ route, navigation }: NativeStackScreenProps<MoreStackParams, 'CardScan'>) {
+  const insets = useSafeAreaInsets();
   const [permission, requestPermission] = useCameraPermissions();
   const cameraRef = useRef<CameraView>(null);
   const [torch, setTorch] = useState(false);
@@ -57,7 +59,7 @@ export function CardScanScreen({ route, navigation }: NativeStackScreenProps<Mor
       <View style={styles.frameWrap} pointerEvents="none">
         <View style={styles.frame} />
       </View>
-      <View style={styles.topBar}>
+      <View style={[styles.topBar, { top: insets.top + space.md }]}>
         <Pressable style={styles.iconBtn} onPress={() => navigation.goBack()} hitSlop={10} accessibilityRole="button" accessibilityLabel="Close">
           <Text style={styles.iconText}>Close</Text>
         </Pressable>
@@ -65,7 +67,7 @@ export function CardScanScreen({ route, navigation }: NativeStackScreenProps<Mor
           <Text style={styles.iconText}>{torch ? '⚡ On' : '⚡ Off'}</Text>
         </Pressable>
       </View>
-      <View style={styles.bottomBar}>
+      <View style={[styles.bottomBar, { bottom: insets.bottom + space.xl }]}>
         {notice ? <Text style={styles.notice}>{notice}</Text> : <Text style={styles.hint}>Keep the card inside the frame</Text>}
         <Pressable style={[styles.shutter, busy && styles.shutterBusy]} onPress={() => void capture()} disabled={busy} accessibilityRole="button" accessibilityLabel="Take photo">
           {busy ? <ActivityIndicator color="#ffffff" /> : <View style={styles.shutterDot} />}
