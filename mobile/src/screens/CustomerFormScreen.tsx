@@ -43,9 +43,10 @@ const opt = (v: string) => v.trim() || undefined;
  */
 export function CustomerFormScreen({ route, navigation }: NativeStackScreenProps<CustomersStackParams, 'CustomerForm'>) {
   const id = route.params?.id;
+  const fromLead = route.params?.fromLead;
   const qc = useQueryClient();
   const existing = useQuery({ queryKey: ['customer', id], queryFn: () => api.get<CustomerDetail>(`/customers/${id}`), enabled: Boolean(id) });
-  const [form, setForm] = useState<Form>(EMPTY);
+  const [form, setForm] = useState<Form>(() => (fromLead ? { ...EMPTY, name: fromLead.name, contactName: fromLead.contactName, phone: fromLead.phone ?? '', email: fromLead.email ?? '' } : EMPTY));
   const [loaded, setLoaded] = useState(!id);
   const [error, setError] = useState<string | null>(null);
   const [duplicates, setDuplicates] = useState<{ matches: DuplicateMatch[]; canConfirm: boolean } | null>(null);

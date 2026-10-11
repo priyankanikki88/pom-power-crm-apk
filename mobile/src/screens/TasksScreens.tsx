@@ -14,7 +14,8 @@ import { colors, radius, space } from '../theme';
 
 type TaskStatus = 'OPEN' | 'IN_PROGRESS' | 'DONE' | 'CANCELLED';
 type TaskPriority = 'LOW' | 'MEDIUM' | 'HIGH';
-export type TaskView = 'mine' | 'given' | 'team' | 'all';
+type TaskAssignmentStatus = 'DIRECT' | 'PENDING_APPROVAL' | 'REJECTED';
+export type TaskView = 'mine' | 'given' | 'approvals' | 'team' | 'all';
 
 interface Named {
   id: string;
@@ -42,6 +43,8 @@ interface Task {
   extensionRequestNote?: string | null;
   assignedTo: { id: string; fullName: string; department: Named | null };
   creator: { id: string; fullName: string } | null;
+  assignmentStatus: TaskAssignmentStatus;
+  assignmentApprover: { id: string; fullName: string } | null;
   department: Named | null;
   taskType: Named | null;
   assistBranch: Named | null;
@@ -58,6 +61,7 @@ interface Counts {
   open: number;
   overdue: number;
   management: boolean;
+  pendingApprovals: number;
 }
 
 const STATUS_LABEL: Record<TaskStatus, string> = { OPEN: 'To do', IN_PROGRESS: 'In progress', DONE: 'Done', CANCELLED: 'Cancelled' };
@@ -81,6 +85,7 @@ export function TasksScreen({ navigation }: NativeStackScreenProps<MoreStackPara
   const views: Array<{ value: TaskView; label: string }> = [
     { value: 'mine', label: counts.data && counts.data.open > 0 ? `Mine (${counts.data.open})` : 'Mine' },
     { value: 'given', label: 'Given' },
+    ...(counts.data && counts.data.pendingApprovals > 0 ? [{ value: 'approvals' as const, label: `Approvals (${counts.data.pendingApprovals})` }] : []),
     ...(hasPermission('team.view') || counts.data?.management ? [{ value: 'team' as const, label: 'Team' }] : []),
     ...(counts.data?.management ? [{ value: 'all' as const, label: 'All' }] : []),
   ];
@@ -118,6 +123,8 @@ export function TasksScreen({ navigation }: NativeStackScreenProps<MoreStackPara
             </Text>
             {item.assistanceNeeded ? <Text style={styles.flag}>Assistance sought</Text> : null}
             {item.extensionRequestDate ? <Text style={styles.flag}>More time asked: {formatDate(item.extensionRequestDate)}</Text> : null}
+            {item.assignmentStatus === 'PENDING_APPROVAL' ? <Text style={styles.flag}>Awaiting approval{item.assignmentApprover ? ` from ${item.assignmentApprover.fullName}` : ' (management)'}</Text> : null}
+            {item.assignmentStatus === 'REJECTED' ? <Text style={[styles.flag, styles.overdue]}>Assignment not approved</Text> : null}
           </Pressable>
         )}
       />
@@ -158,6 +165,7 @@ export function TaskDetailScreen({ route }: NativeStackScreenProps<MoreStackPara
 
   const mine = t.assignedToId === user?.id;
   const owner = t.createdBy === user?.id || counts.data?.management === true;
+  const isApprover = t.assignmentStatus === 'PENDING_APPROVAL' && (t.assignmentApprover ? t.assignmentApprover.id === user?.id : counts.data?.management === true);
   const dueDay = t.dueDate ? dayFromIso(t.dueDate) : null;
   const dayAfterDue = dueDay ? new Date(dueDay.getFullYear(), dueDay.getMonth(), dueDay.getDate() + 1) : undefined;
 
@@ -177,6 +185,8 @@ export function TaskDetailScreen({ route }: NativeStackScreenProps<MoreStackPara
         {t.description ? <Text style={[text.body, styles.line]}>{t.description}</Text> : null}
         <View style={styles.gap} />
         <Row label="Status" value={STATUS_LABEL[t.status]} />
+        {t.assignmentStatus === 'PENDING_APPROVAL' ? <Text style={styles.flag}>Awaiting approval{t.assignmentApprover ? ` from ${t.assignmentApprover.fullName}` : ' (management)'}</Text> : null}
+        {t.assignmentStatus === 'REJECTED' ? <Text style={[styles.flag, styles.overdue]}>Assignment not approved</Text> : null}
         <Row label="Deadline" value={t.dueDate ? `${formatDate(t.dueDate)}${isOverdue(t) ? ' (overdue)' : ''}` : 'None'} />
         {t.originalDueDate && t.dueDate && t.originalDueDate.slice(0, 10) !== t.dueDate.slice(0, 10) ? <Row label="First deadline" value={formatDate(t.originalDueDate)} /> : null}
         <Row label="Given to" value={t.assignedTo.fullName} />
@@ -230,7 +240,17 @@ export function TaskDetailScreen({ route }: NativeStackScreenProps<MoreStackPara
         </Card>
       ) : null}
 
-      {isOpen(t) ? (
+      {isApprover ? (
+        <Card>
+          <Text style={[text.h2, styles.section]}>Actions</Text>
+          <View style={styles.action}>
+            <Button title="Approve" loading={update.isPending} onPress={() => send('Approve', { assignmentDecision: 'APPROVE' })} />
+          </View>
+          <View style={styles.action}>
+            <Button title="Not Approve" variant="secondary" disabled={update.isPending} onPress={() => send('Not approve', { assignmentDecision: 'REJECT' })} />
+          </View>
+        </Card>
+      ) : isOpen(t) ? (
         <Card>
           <Text style={[text.h2, styles.section]}>Actions</Text>
           {mine && t.status === 'OPEN' ? (

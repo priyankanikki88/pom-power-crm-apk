@@ -42,8 +42,8 @@ import { colors } from './theme';
 export type CustomersStackParams = {
   CustomerList: undefined;
   CustomerDetail: { id: string; name: string };
-  /** No id = add a customer. */
-  CustomerForm: { id?: string } | undefined;
+  /** No id = add a customer. `fromLead` prefills the new-customer form when opened via Leads → "Convert to Customer". */
+  CustomerForm: { id?: string; fromLead?: { name: string; contactName: string; phone?: string; email?: string } } | undefined;
 };
 export type FollowUpsStackParams = {
   FollowUpList: undefined;

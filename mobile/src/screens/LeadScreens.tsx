@@ -1,11 +1,14 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useNavigation, type NavigationProp } from '@react-navigation/native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
+import * as ImagePicker from 'expo-image-picker';
 import { useLayoutEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, Alert, FlatList, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useAuth } from '../auth/AuthContext';
 import { ChipSelect, DateField, DateTimeField, Segmented } from '../components/inputs';
 import { Button, Card, Empty, ErrorBox, Field, Row, text } from '../components/ui';
 import { api, ApiError } from '../lib/api';
+import { scanBusinessCard } from '../lib/cardScan';
 import { dayFromIso, formatDate, isoDay, pickedParts } from '../lib/dates';
 import { formatINR } from '../lib/format';
 import type { MoreStackParams } from '../navigation';
@@ -106,11 +109,22 @@ export function LeadsScreen({ navigation }: NativeStackScreenProps<MoreStackPara
 }
 
 function LeadList({ onOpen }: { onOpen?: (id: string) => void }) {
+  const { hasPermission } = useAuth();
+  const canAddCustomer = hasPermission('customer.manage');
+  const qc = useQueryClient();
+  const navigation = useNavigation<NavigationProp<Record<string, object | undefined>>>();
   const list = useLeads();
   const [search, setSearch] = useState('');
   const [stage, setStage] = useState<string | null>(null);
   const today = isoDay(new Date());
   const rows = list.data?.items ?? [];
+  const convert = useMutation({
+    mutationFn: (l: Lead) => (l.stage === 'Won' ? Promise.resolve() : api.patch(`/leads/${l.id}`, { stage: 'Won' })),
+    onSuccess: (_, l) => {
+      void qc.invalidateQueries({ queryKey: ['leads'] });
+      navigation.navigate('Customers', { screen: 'CustomerForm', params: { fromLead: { name: l.company, contactName: l.name, phone: l.phone ?? undefined, email: l.email ?? undefined } } });
+    },
+  });
   const shown = useMemo(() => {
     const q = search.trim().toLowerCase();
     return rows.filter((l) => (!stage || l.stage === stage) && (!q || [l.name, l.company, l.phone, l.email, l.owner?.fullName].some((v) => v?.toLowerCase().includes(q))));
@@ -142,21 +156,34 @@ function LeadList({ onOpen }: { onOpen?: (id: string) => void }) {
       renderItem={({ item }) => {
         const late = !!item.follow && item.follow < today && !['Won', 'Lost'].includes(item.stage);
         return (
-          <Pressable style={({ pressed }) => [styles.item, pressed && styles.pressed]} disabled={!onOpen} onPress={() => onOpen?.(item.id)} accessibilityRole="button">
-            <View style={styles.itemHead}>
-              <Text style={styles.name} numberOfLines={2}>
-                {item.name}
+          <View style={styles.item}>
+            <Pressable style={({ pressed }) => pressed && styles.pressed} disabled={!onOpen} onPress={() => onOpen?.(item.id)} accessibilityRole="button">
+              <View style={styles.itemHead}>
+                <Text style={styles.name} numberOfLines={2}>
+                  {item.name}
+                </Text>
+                <Text style={[styles.tag, { color: STAGE_TONE[item.stage] ?? colors.muted }]}>{item.stage}</Text>
+              </View>
+              <Text style={styles.meta}>
+                {item.company} · {item.source}
               </Text>
-              <Text style={[styles.tag, { color: STAGE_TONE[item.stage] ?? colors.muted }]}>{item.stage}</Text>
-            </View>
-            <Text style={styles.meta}>
-              {item.company} · {item.source}
-            </Text>
-            <Text style={styles.when}>{formatINR(item.value)}</Text>
-            <Text style={[styles.meta, late && { color: colors.danger, fontWeight: '700' }]}>
-              Next follow-up: {item.follow ? formatDate(item.follow) : '—'} · {item.owner?.fullName ?? 'Unassigned'}
-            </Text>
-          </Pressable>
+              <Text style={styles.when}>{formatINR(item.value)}</Text>
+              <Text style={[styles.meta, late && { color: colors.danger, fontWeight: '700' }]}>
+                Next follow-up: {item.follow ? formatDate(item.follow) : '—'} · {item.owner?.fullName ?? 'Unassigned'}
+              </Text>
+            </Pressable>
+            {canAddCustomer && item.stage !== 'Lost' ? (
+              <View style={styles.rowAction}>
+                <Button
+                  title={item.stage === 'Won' ? 'Create Customer' : 'Convert to Customer'}
+                  variant="secondary"
+                  loading={convert.isPending && convert.variables?.id === item.id}
+                  disabled={convert.isPending}
+                  onPress={() => convert.mutate(item)}
+                />
+              </View>
+            ) : null}
+          </View>
         );
       }}
     />
@@ -319,8 +346,30 @@ function LeadFormBody({ lead, onDone, canDelete, canTransfer }: { lead?: Lead; o
   const [transferring, setTransferring] = useState(false);
   const [toOwner, setToOwner] = useState<string | null>(null);
   const [reason, setReason] = useState('');
+  const [scanning, setScanning] = useState(false);
   const owners = useQuery({ queryKey: ['leads', 'owners'], queryFn: () => api.get<Person[]>('/leads/owners'), enabled: transferring });
   const sourceOptions = options(lead && !SOURCES.includes(lead.source) ? [...SOURCES, lead.source] : SOURCES);
+
+  async function scanCard() {
+    setError(null);
+    try {
+      const permission = await ImagePicker.requestCameraPermissionsAsync();
+      if (!permission.granted) return setError('Camera permission was not given. Allow it in the phone settings to scan a card.');
+      const result = await ImagePicker.launchCameraAsync({ mediaTypes: 'images', quality: 0.8 });
+      if (result.canceled || !result.assets[0]) return;
+      setScanning(true);
+      const card = await scanBusinessCard(result.assets[0].uri);
+      if (card.name) setName(card.name);
+      if (card.company) setCompany(card.company);
+      if (card.phone) setPhone(card.phone);
+      if (card.email) setEmail(card.email);
+      if (!card.name && !card.company && !card.phone && !card.email) setError('Could not read the card clearly — try again with better light, or fill the details in by hand.');
+    } catch {
+      setError('Could not scan the card.');
+    } finally {
+      setScanning(false);
+    }
+  }
 
   const save = useMutation({
     mutationFn: () => {
@@ -349,6 +398,12 @@ function LeadFormBody({ lead, onDone, canDelete, canTransfer }: { lead?: Lead; o
     <ScrollView style={styles.screen} contentContainerStyle={styles.list} keyboardShouldPersistTaps="handled">
       <Card>
         {error ? <ErrorBox message={error} /> : null}
+        {!lead ? (
+          <View style={styles.gap}>
+            <Button title="Scan Visiting Card" variant="secondary" loading={scanning} disabled={scanning} onPress={() => void scanCard()} />
+            <Text style={[text.muted, styles.hint]}>Reads the card on the phone, then fills in the fields below for you to check.</Text>
+          </View>
+        ) : null}
         <Field label="Contact name *" value={name} onChangeText={setName} maxLength={200} />
         <Field label="Company *" value={company} onChangeText={setCompany} maxLength={200} />
         <Field label="Email" value={email} onChangeText={setEmail} keyboardType="email-address" autoCapitalize="none" maxLength={200} />
