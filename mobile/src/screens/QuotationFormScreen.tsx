@@ -10,10 +10,10 @@ import { Button, Card, ErrorBox, Field, text } from '../components/ui';
 import { api, ApiError } from '../lib/api';
 import { dayFromIso, isoDay } from '../lib/dates';
 import { formatINR } from '../lib/format';
-import { AMC_TYPES, amcDraftError, amcPayload, EMPTY_AMC, manageableTypes, oneYearFrom, type AmcDraft, type SalesType } from '../lib/sales';
+import { AMC_TYPES, FREIGHT_TERMS_OPTIONS, amcDraftError, amcPayload, EMPTY_AMC, manageableTypes, oneYearFrom, type AmcDraft, type FreightTerms, type SalesType } from '../lib/sales';
 import type { QuotationsStackParams } from '../navigation';
 import { colors, radius, space } from '../theme';
-import type { Paginated, ProductVariant, QuotationDetail, SalesDoc } from '../types';
+import type { Paginated, ProductVariant, QuotationDetail, SalesDoc, SalesDocDetail } from '../types';
 
 type Mode = 'QUOTATION' | 'PROFORMA' | 'FORMAT4';
 
@@ -28,8 +28,11 @@ interface Line {
   discountPct: string;
   /** Only editable with the price-override permission; blank = keep `basePrice`. */
   unitPrice: string;
+  /** Rating / warranty default from the product master, editable per line. */
+  rating: string;
+  warranty: string;
   /** Set on a line that already exists on the quotation being edited, with what was saved. */
-  saved?: { itemId: string; qty: number; discountPct: number };
+  saved?: { itemId: string; qty: number; discountPct: number; variantId: string; rating: string; warranty: string };
 }
 
 const AMC_TYPE_OPTIONS = AMC_TYPES.map((t) => ({ value: t, label: t }));
@@ -57,6 +60,8 @@ const INTRO: Record<Mode, string | null> = {
 export function QuotationFormScreen({ route, navigation }: NativeStackScreenProps<QuotationsStackParams, 'QuotationForm'>) {
   const mode: Mode = route.params?.mode ?? 'QUOTATION';
   const editId = route.params?.editId;
+  // Only a quotation or a proforma invoice can be edited directly (while still a DRAFT) — a Format-4 is never changed in place, use Revise instead.
+  const editBase = mode === 'PROFORMA' ? '/proforma-invoices' : '/quotations';
   const { hasPermission } = useAuth();
   const canOverridePrice = hasPermission('quotation.price.override');
   const canRecordPayment = mode === 'FORMAT4' && hasPermission('payment.manage');
@@ -73,13 +78,19 @@ export function QuotationFormScreen({ route, navigation }: NativeStackScreenProp
   const [subject, setSubject] = useState('');
   const [notes, setNotes] = useState('');
   const [validUntil, setValidUntil] = useState<Date | null>(null);
+  const [freightOverride, setFreightOverride] = useState('');
+  const [deliveryAddressOverride, setDeliveryAddressOverride] = useState('');
   const [payment, setPayment] = useState<PaymentDraft>(newPaymentDraft);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
-  // Editing: load the quotation once and fill the form from it (again after a save that failed part-way).
-  const existing = useQuery({ queryKey: ['quotation', editId], queryFn: () => api.get<QuotationDetail>(`/quotations/${editId}`), enabled: Boolean(editId) });
-  const filledFrom = useRef<QuotationDetail | null>(null);
+  // Editing: load the quotation (or proforma invoice) once and fill the form from it (again after a save that failed part-way).
+  const existing = useQuery({
+    queryKey: [mode === 'PROFORMA' ? 'sales-doc' : 'quotation', mode === 'PROFORMA' ? 'PROFORMA' : undefined, editId].filter((x) => x !== undefined),
+    queryFn: () => api.get<QuotationDetail | SalesDocDetail>(`${editBase}/${editId}`),
+    enabled: Boolean(editId),
+  });
+  const filledFrom = useRef<QuotationDetail | SalesDocDetail | null>(null);
   useEffect(() => {
     const q = existing.data;
     if (!q || filledFrom.current === q) return;
@@ -89,26 +100,34 @@ export function QuotationFormScreen({ route, navigation }: NativeStackScreenProp
     setAmc({ amcType: q.amcType ?? '', start: dayFromIso(q.amcStartDate), end: dayFromIso(q.amcEndDate), siteAddress: q.siteAddress ?? '', amcRemarks: q.amcRemarks ?? '', amcTerms: q.amcTerms ?? '' });
     setIsProject(Boolean(q.isProject));
     setProjectName(q.projectName ?? '');
-    setSubject(q.subject ?? '');
-    setNotes(q.notes ?? '');
+    if ('subject' in q) setSubject(q.subject ?? '');
+    if ('notes' in q) setNotes(q.notes ?? '');
     setValidUntil(dayFromIso(q.validUntil));
+    setFreightOverride(q.freightOverride ?? '');
+    setDeliveryAddressOverride(q.deliveryAddressOverride ?? '');
     setLines(
-      q.items.map((it) => ({
-        key: `item-${it.id}`,
-        variantId: it.productVariantId ?? '',
-        title: `${it.productNameSnapshot || it.descriptionSnapshot}${it.ratingSnapshot ? ` · ${it.ratingSnapshot}` : ''}`,
-        code: it.productCodeSnapshot ?? '',
-        basePrice: Number(it.unitPriceSnapshot),
-        qty: String(Number(it.qty)),
-        discountPct: Number(it.discountPct) > 0 ? String(Number(it.discountPct)) : '',
-        unitPrice: '',
-        saved: { itemId: it.id, qty: Number(it.qty), discountPct: Number(it.discountPct) },
-      })),
+      q.items.map((it) => {
+        const rating = it.ratingSnapshot ?? '';
+        const warranty = it.warrantySnapshot ?? '';
+        return {
+          key: `item-${it.id}`,
+          variantId: it.productVariantId ?? '',
+          title: `${it.productNameSnapshot || it.descriptionSnapshot}${it.ratingSnapshot ? ` · ${it.ratingSnapshot}` : ''}`,
+          code: it.productCodeSnapshot ?? '',
+          basePrice: Number(it.unitPriceSnapshot),
+          qty: String(Number(it.qty)),
+          discountPct: Number(it.discountPct) > 0 ? String(Number(it.discountPct)) : '',
+          unitPrice: '',
+          rating,
+          warranty,
+          saved: { itemId: it.id, qty: Number(it.qty), discountPct: Number(it.discountPct), variantId: it.productVariantId ?? '', rating, warranty },
+        };
+      }),
     );
   }, [existing.data]);
 
   useLayoutEffect(() => {
-    navigation.setOptions({ title: editId ? 'Edit Quotation' : `${isAmc && mode === 'QUOTATION' ? 'New AMC Quotation' : TITLE[mode]}${isAmc && mode !== 'QUOTATION' ? ' (AMC)' : ''}` });
+    navigation.setOptions({ title: editId ? (mode === 'PROFORMA' ? 'Edit Proforma Invoice' : 'Edit Quotation') : `${isAmc && mode === 'QUOTATION' ? 'New AMC Quotation' : TITLE[mode]}${isAmc && mode !== 'QUOTATION' ? ' (AMC)' : ''}` });
   }, [navigation, editId, isAmc, mode]);
 
   const [input, setInput] = useState('');
@@ -123,9 +142,16 @@ export function QuotationFormScreen({ route, navigation }: NativeStackScreenProp
     enabled: search.length >= 2,
   });
 
+  const [changingKey, setChangingKey] = useState<string | null>(null);
   const setLine = (key: string, patch: Partial<Line>) => setLines((ls) => ls.map((l) => (l.key === key ? { ...l, ...patch } : l)));
   function addProduct(v: ProductVariant) {
-    setLines((ls) => (ls.some((l) => l.variantId === v.id) ? ls : [...ls, { key: `new-${v.id}`, variantId: v.id, title: variantTitle(v), code: v.productCode, basePrice: masterPrice(v), qty: '1', discountPct: '', unitPrice: '' }]));
+    if (changingKey) {
+      // Swapping the product on an existing line keeps its saved-item id, qty and discount — only the product, price, GST and rating change.
+      setLine(changingKey, { variantId: v.id, title: variantTitle(v), code: v.productCode, basePrice: masterPrice(v), unitPrice: '', rating: v.rating ?? '' });
+      setChangingKey(null);
+    } else {
+      setLines((ls) => (ls.some((l) => l.variantId === v.id) ? ls : [...ls, { key: `new-${v.id}`, variantId: v.id, title: variantTitle(v), code: v.productCode, basePrice: masterPrice(v), qty: '1', discountPct: '', unitPrice: '', rating: v.rating ?? '', warranty: '' }]));
+    }
     setInput('');
     setSearch('');
   }
@@ -143,28 +169,31 @@ export function QuotationFormScreen({ route, navigation }: NativeStackScreenProp
     qty: num(l.qty),
     ...(l.discountPct.trim() ? { discountPct: num(l.discountPct) } : {}),
     ...(canOverridePrice && l.unitPrice.trim() ? { unitPrice: num(l.unitPrice) } : {}),
+    ...(l.rating.trim() ? { ratingSnapshot: l.rating.trim() } : {}),
+    ...(l.warranty.trim() ? { warrantySnapshot: l.warranty.trim() } : {}),
   });
   // A project order is a product sale marked as one (bulk / tender / plant); an AMC is never a project.
   // Sent only when it matters (marked, or un-marking while editing), so an older server is never given a field it does not know.
   const projectFields = () => (isAmc || (!isProject && !editId) ? {} : { isProject, ...(isProject ? { projectName: projectName.trim() } : {}) });
   const typeFields = () => ({ salesType, ...(isAmc ? amcPayload(amc) : projectFields()) });
+  const freightFields = () => ({ freightOverride: freightOverride || (editId ? null : undefined), deliveryAddressOverride: deliveryAddressOverride.trim() || (editId ? null : undefined) });
 
   /** A new document. For a direct Format-4 the payment already received is recorded straight after, when one was typed. */
   async function create() {
     const items = lines.map(itemInput);
     if (mode === 'QUOTATION') {
-      const q = await api.post<QuotationDetail>('/quotations', { customerId: customer!.id, subject: subject.trim() || undefined, notes: notes.trim() || undefined, validUntil: validUntil ? isoDay(validUntil) : undefined, items, ...typeFields() });
+      const q = await api.post<QuotationDetail>('/quotations', { customerId: customer!.id, subject: subject.trim() || undefined, notes: notes.trim() || undefined, validUntil: validUntil ? isoDay(validUntil) : undefined, items, ...typeFields(), ...freightFields() });
       void qc.invalidateQueries({ queryKey: ['quotations'] });
       navigation.replace('QuotationDetail', { id: q.id, no: q.quotationNo });
       return;
     }
     if (mode === 'PROFORMA') {
-      const pi = await api.post<SalesDoc>('/proforma-invoices/direct', { customerId: customer!.id, items, validUntil: validUntil ? isoDay(validUntil) : undefined, ...typeFields() });
+      const pi = await api.post<SalesDoc>('/proforma-invoices/direct', { customerId: customer!.id, items, validUntil: validUntil ? isoDay(validUntil) : undefined, ...typeFields(), ...freightFields() });
       void qc.invalidateQueries({ queryKey: ['sales-docs'] });
       navigation.replace('DocDetail', { kind: 'PROFORMA', id: pi.id, no: pi.proformaNo ?? '' });
       return;
     }
-    const f4 = await api.post<SalesDoc>('/format4/direct-paid', { customerId: customer!.id, items, ...typeFields() });
+    const f4 = await api.post<SalesDoc>('/format4/direct-paid', { customerId: customer!.id, items, ...typeFields(), ...freightFields() });
     void qc.invalidateQueries({ queryKey: ['sales-docs'] });
     const amount = canRecordPayment ? paymentAmount(payment) : null;
     let notice: string | undefined;
@@ -179,26 +208,35 @@ export function QuotationFormScreen({ route, navigation }: NativeStackScreenProp
     navigation.replace('DocDetail', { kind: 'FORMAT4', id: f4.id, no: f4.format4No ?? '', notice });
   }
 
-  /** Saves the changes to a draft quotation: its header, then new lines, changed lines and removed lines, one request each. */
-  async function saveEdit(q: QuotationDetail) {
-    await api.patch(`/quotations/${q.id}`, { subject: subject.trim(), notes: notes.trim(), ...(validUntil ? { validUntil: isoDay(validUntil) } : {}), ...(isAmc ? amcPayload(amc) : projectFields()) });
-    // New lines first: the server never lets a quotation drop to no lines, so removals come last.
-    for (const l of lines.filter((x) => !x.saved)) await api.post(`/quotations/${q.id}/items`, itemInput(l));
+  /** Saves the changes to a draft quotation or proforma invoice: its header, then new lines, changed lines and removed lines, one request each. */
+  async function saveEdit(q: QuotationDetail | SalesDocDetail) {
+    const header = { ...(validUntil ? { validUntil: isoDay(validUntil) } : {}), ...(isAmc ? amcPayload(amc) : projectFields()), ...freightFields() };
+    await api.patch(`${editBase}/${q.id}`, mode === 'PROFORMA' ? header : { subject: subject.trim(), notes: notes.trim(), ...header });
+    // New lines first: the server never lets a document drop to no lines, so removals come last.
+    for (const l of lines.filter((x) => !x.saved)) await api.post(`${editBase}/${q.id}/items`, itemInput(l));
     for (const l of lines) {
       if (!l.saved) continue;
       const qty = num(l.qty);
       const discountPct = l.discountPct.trim() ? num(l.discountPct) : 0;
       const changes = {
+        ...(l.variantId !== l.saved.variantId ? { productVariantId: l.variantId } : {}),
         ...(qty !== l.saved.qty ? { qty } : {}),
         ...(discountPct !== l.saved.discountPct ? { discountPct } : {}),
         ...(canOverridePrice && l.unitPrice.trim() && num(l.unitPrice) !== l.basePrice ? { unitPrice: num(l.unitPrice) } : {}),
+        ...(l.rating.trim() !== l.saved.rating ? { ratingSnapshot: l.rating.trim() } : {}),
+        ...(l.warranty.trim() !== l.saved.warranty ? { warrantySnapshot: l.warranty.trim() } : {}),
       };
-      if (Object.keys(changes).length > 0) await api.patch(`/quotations/${q.id}/items/${l.saved.itemId}`, changes);
+      if (Object.keys(changes).length > 0) await api.patch(`${editBase}/${q.id}/items/${l.saved.itemId}`, changes);
     }
     const kept = new Set(lines.map((l) => l.saved?.itemId));
-    for (const it of q.items) if (!kept.has(it.id)) await api.delete(`/quotations/${q.id}/items/${it.id}`);
-    void qc.invalidateQueries({ queryKey: ['quotations'] });
-    await qc.invalidateQueries({ queryKey: ['quotation', q.id] });
+    for (const it of q.items) if (!kept.has(it.id)) await api.delete(`${editBase}/${q.id}/items/${it.id}`);
+    if (mode === 'PROFORMA') {
+      void qc.invalidateQueries({ queryKey: ['sales-docs'] });
+      await qc.invalidateQueries({ queryKey: ['sales-doc', 'PROFORMA', q.id] });
+    } else {
+      void qc.invalidateQueries({ queryKey: ['quotations'] });
+      await qc.invalidateQueries({ queryKey: ['quotation', q.id] });
+    }
     navigation.goBack();
   }
 
@@ -239,7 +277,7 @@ export function QuotationFormScreen({ route, navigation }: NativeStackScreenProp
   if (editId && existing.data && existing.data.status !== 'DRAFT') {
     return (
       <View style={[styles.screen, styles.body]}>
-        <ErrorBox message="Only a draft quotation can be edited. Go back and use “Revise” to make a new draft copy of this one." />
+        <ErrorBox message={mode === 'PROFORMA' ? 'Only a draft proforma invoice can be edited.' : 'Only a draft quotation can be edited. Go back and use “Revise” to make a new draft copy of this one.'} />
       </View>
     );
   }
@@ -306,6 +344,9 @@ export function QuotationFormScreen({ route, navigation }: NativeStackScreenProp
               {l.code ? `${l.code} · ` : ''}
               {l.saved ? `Saved price ${formatINR(l.basePrice)}` : l.basePrice > 0 ? `List price ${formatINR(l.basePrice)}` : 'No list price set'}
             </Text>
+            <Pressable onPress={() => setChangingKey(l.key)} hitSlop={10} accessibilityRole="button">
+              <Text style={styles.changeLink}>{changingKey === l.key ? 'Changing — pick below, or Cancel' : 'Change Product'}</Text>
+            </Pressable>
             <View style={styles.lineInputs}>
               <View style={styles.small}>
                 <Text style={styles.label}>Qty *</Text>
@@ -322,9 +363,31 @@ export function QuotationFormScreen({ route, navigation }: NativeStackScreenProp
                 </View>
               ) : null}
             </View>
+            <View style={styles.lineInputs}>
+              <View style={styles.flex}>
+                <Text style={styles.label}>Rating</Text>
+                <TextInput style={styles.input} value={l.rating} onChangeText={(v) => setLine(l.key, { rating: v })} placeholder="e.g. 7 kW" accessibilityLabel="Rating" />
+              </View>
+              <View style={styles.flex}>
+                <Text style={styles.label}>Warranty</Text>
+                <TextInput style={styles.input} value={l.warranty} onChangeText={(v) => setLine(l.key, { warranty: v })} placeholder="e.g. 1 year" accessibilityLabel="Warranty" />
+              </View>
+            </View>
           </View>
         ))}
-        <Field label={`Add ${isAmc ? 'equipment' : 'a product'} (type at least 2 letters)`} value={input} onChangeText={setInput} autoCapitalize="none" autoCorrect={false} placeholder="Name, code, rating…" />
+        <Field
+          label={changingKey ? 'Pick the new product (type at least 2 letters)' : `Add ${isAmc ? 'equipment' : 'a product'} (type at least 2 letters)`}
+          value={input}
+          onChangeText={setInput}
+          autoCapitalize="none"
+          autoCorrect={false}
+          placeholder="Name, code, rating…"
+        />
+        {changingKey ? (
+          <Pressable onPress={() => setChangingKey(null)} hitSlop={10} accessibilityRole="button">
+            <Text style={styles.changeLink}>Cancel</Text>
+          </Pressable>
+        ) : null}
         {products.data?.items.map((v) => (
           <Pressable key={v.id} style={styles.result} onPress={() => addProduct(v)} accessibilityRole="button">
             <Text style={text.body}>{variantTitle(v)}</Text>
@@ -335,6 +398,12 @@ export function QuotationFormScreen({ route, navigation }: NativeStackScreenProp
           </Pressable>
         ))}
         {products.data && products.data.items.length === 0 ? <Text style={text.muted}>No product matches.</Text> : null}
+      </Card>
+
+      <Card>
+        <Text style={[text.h2, styles.section]}>Freight &amp; delivery</Text>
+        <ChipSelect label="Freight terms (blank = customer's default)" value={(freightOverride || null) as FreightTerms | null} options={FREIGHT_TERMS_OPTIONS} onChange={(v) => setFreightOverride(v ?? '')} allowClear />
+        <Field label="Delivery address (blank = customer's default address)" value={deliveryAddressOverride} onChangeText={setDeliveryAddressOverride} multiline placeholder="One-off delivery address for this document only" />
       </Card>
 
       {canRecordPayment ? (
@@ -364,6 +433,7 @@ const styles = StyleSheet.create({
   line: { paddingVertical: space.md, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.border, marginBottom: space.sm },
   lineHead: { flexDirection: 'row', alignItems: 'flex-start', gap: space.sm },
   remove: { color: colors.danger, fontWeight: '700', fontSize: 13 },
+  changeLink: { color: colors.primary, fontWeight: '600', fontSize: 13, marginTop: space.xs },
   lineInputs: { flexDirection: 'row', gap: space.sm, marginTop: space.sm },
   small: { width: 92 },
   label: { fontSize: 12, fontWeight: '600', color: colors.muted, marginBottom: 2 },

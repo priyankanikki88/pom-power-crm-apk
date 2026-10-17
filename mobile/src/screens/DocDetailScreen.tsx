@@ -7,7 +7,7 @@ import { ApprovalCard } from '../components/ApprovalCard';
 import { AmcCard, ItemsCard, PdfButton, STATUS_TONE, TotalsCard } from '../components/docParts';
 import { PaymentSection } from '../components/PaymentSection';
 import { ReasonAction } from '../components/ReasonAction';
-import { Button, Card, ErrorBox, Row, text } from '../components/ui';
+import { Button, Card, ErrorBox, Field, Row, text } from '../components/ui';
 import { api, ApiError } from '../lib/api';
 import { formatDate } from '../lib/dates';
 import { enumLabel } from '../lib/format';
@@ -38,6 +38,8 @@ export function DocDetailScreen({ route, navigation }: NativeStackScreenProps<Qu
   const q = useQuery({ queryKey: ['sales-doc', kind, id], queryFn: () => api.get<SalesDocDetail>(`${base}/${id}`) });
   const d = q.data;
   const [error, setError] = useState<string | null>(null);
+  const [editingInvoiceNo, setEditingInvoiceNo] = useState(false);
+  const [invoiceNoDraft, setInvoiceNoDraft] = useState('');
 
   const refresh = () => {
     void qc.invalidateQueries({ queryKey: ['sales-doc', kind, id] });
@@ -81,6 +83,16 @@ export function DocDetailScreen({ route, navigation }: NativeStackScreenProps<Qu
     onError: (err) => setError(errorText(err, 'Could not make a revision.')),
   });
 
+  // Reference only: the actual tax invoice number, when raised outside this CRM (e.g. in Tally) instead of through Raise Bill.
+  const setInvoiceNo = useMutation({
+    mutationFn: (externalInvoiceNo: string) => api.patch<SalesDoc>(`/format4/${id}/invoice-number`, { externalInvoiceNo: externalInvoiceNo || null }),
+    onSuccess: () => {
+      refresh();
+      setEditingInvoiceNo(false);
+    },
+    onError: (err) => setError(errorText(err, 'Could not save the invoice number.')),
+  });
+
   function confirm(title: string, message: string, run: () => void) {
     setError(null);
     Alert.alert(title, message, [
@@ -96,6 +108,7 @@ export function DocDetailScreen({ route, navigation }: NativeStackScreenProps<Qu
   const liveF4 = d?.format4Documents?.filter((f) => f.status !== 'CANCELLED' && f.status !== 'REJECTED') ?? [];
   const canConvert = proforma && d && PI_CONVERTIBLE.includes(d.status) && liveF4.length === 0 && canFor(hasPermission, d.salesType, 'format4.manage');
   const canSubmit = proforma && d?.status === 'DRAFT' && canManage;
+  const canEdit = proforma && d?.status === 'DRAFT' && canManage;
   // Format-4 -> Bill only once it has been approved, and only one bill (the server enforces both).
   const bills = d?.bills ?? [];
   const canBill = !proforma && d?.approvalStatus === 'APPROVED' && bills.length === 0 && hasPermission('bill.manage');
@@ -122,7 +135,35 @@ export function DocDetailScreen({ route, navigation }: NativeStackScreenProps<Qu
             <Row label="Quotation" value={d.quotation?.quotationNo} />
             <Row label="Proforma" value={!proforma ? d.proformaInvoice?.proformaNo : null} />
             <Row label="Revision" value={!proforma && d.version > 1 ? `Revision ${d.version - 1}${d.revisionReason ? ` — ${d.revisionReason}` : ''}` : null} />
+            {!proforma && !editingInvoiceNo ? <Row label="Invoice No." value={d.externalInvoiceNo ?? 'Not recorded'} /> : null}
             <PdfButton path={`${base}/${id}/pdf`} fileName={no} title={`${label} ${no}`} />
+            {canEdit ? (
+              <View style={styles.btn}>
+                <Button title="Edit Proforma Invoice" variant="secondary" onPress={() => navigation.navigate('QuotationForm', { mode: 'PROFORMA', editId: id })} />
+              </View>
+            ) : null}
+            {!proforma && canManage ? (
+              editingInvoiceNo ? (
+                <View style={styles.btn}>
+                  <Field label="Invoice No. (e.g. the Tally invoice number)" value={invoiceNoDraft} onChangeText={setInvoiceNoDraft} maxLength={80} />
+                  <View style={styles.inlineRow}>
+                    <Button title="Save" onPress={() => setInvoiceNo.mutate(invoiceNoDraft.trim())} loading={setInvoiceNo.isPending} />
+                    <Button title="Cancel" variant="secondary" onPress={() => setEditingInvoiceNo(false)} />
+                  </View>
+                </View>
+              ) : (
+                <View style={styles.btn}>
+                  <Button
+                    title={d.externalInvoiceNo ? 'Edit Invoice No.' : 'Add Invoice No.'}
+                    variant="secondary"
+                    onPress={() => {
+                      setInvoiceNoDraft(d.externalInvoiceNo ?? '');
+                      setEditingInvoiceNo(true);
+                    }}
+                  />
+                </View>
+              )
+            ) : null}
           </Card>
 
           {error ? <ErrorBox message={error} /> : null}
@@ -219,6 +260,7 @@ const styles = StyleSheet.create({
   section: { marginBottom: space.sm },
   note: { marginBottom: space.md },
   btn: { marginTop: space.sm },
+  inlineRow: { flexDirection: 'row', gap: space.sm },
   link: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: space.md, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.border },
   linkText: { fontSize: 14.5, fontWeight: '700', color: colors.primary },
   foot: { textAlign: 'center', marginBottom: space.lg },

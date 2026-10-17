@@ -6,6 +6,17 @@ export type DocModule = 'quotation' | 'proforma' | 'format4';
 /** The same list the server offers for an AMC (backend/src/commercial/amc-details.ts). */
 export const AMC_TYPES = ['Comprehensive', 'Non-Comprehensive', 'Labour Only', 'Preventive Maintenance', 'Other'];
 
+export type FreightTerms = 'INCLUDED' | 'EXTRA' | 'TO_PAY' | 'PAID_BY_CUSTOMER' | 'OTHER';
+
+/** Per-document override of the customer's own Freight Terms — blank keeps the customer's default. */
+export const FREIGHT_TERMS_OPTIONS: Array<{ value: FreightTerms; label: string }> = [
+  { value: 'INCLUDED', label: 'Included' },
+  { value: 'EXTRA', label: 'Extra' },
+  { value: 'TO_PAY', label: 'To Pay' },
+  { value: 'PAID_BY_CUSTOMER', label: 'Paid by Customer' },
+  { value: 'OTHER', label: 'Other' },
+];
+
 /**
  * Product documents need the document permission itself (quotation.manage, proforma.read, …); AMC documents need
  * amc.manage / amc.read instead — the server's rule, repeated here only to decide what to offer on screen.

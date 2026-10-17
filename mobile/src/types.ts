@@ -115,6 +115,7 @@ export interface QuotationItem {
   descriptionSnapshot: string;
   productNameSnapshot?: string | null;
   ratingSnapshot?: string | null;
+  warrantySnapshot?: string | null;
   qty: string;
   unitPriceSnapshot: string;
   discountPct: string;
@@ -131,6 +132,9 @@ export interface QuotationDetail extends QuotationSummary, AmcFields {
   discountTotal: string;
   taxTotal: string;
   notes: string | null;
+  ownerUserId?: string | null;
+  freightOverride?: string | null;
+  deliveryAddressOverride?: string | null;
   items: QuotationItem[];
   customer: { id: string; customerCode: string; name: string; email: string | null; phone: string | null };
   /** What this quotation was converted to. */
@@ -183,6 +187,10 @@ export interface SalesDocDetail extends SalesDoc, AmcFields {
   subtotal: string;
   taxTotal: string;
   validUntil?: string | null;
+  freightOverride?: string | null;
+  deliveryAddressOverride?: string | null;
+  /** Format-4 only: the actual tax invoice number, when raised outside this CRM (e.g. in Tally) instead of through Raise Bill. */
+  externalInvoiceNo?: string | null;
   items: QuotationItem[];
   /** Proforma only: the Format-4s made from it. */
   format4Documents?: Array<{ id: string; format4No: string; status: string }>;
