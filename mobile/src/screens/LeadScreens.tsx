@@ -512,12 +512,10 @@ function LeadFormBody({ lead, onDone, canDelete, canTransfer }: { lead?: Lead; o
     <ScrollView style={styles.screen} contentContainerStyle={styles.list} keyboardShouldPersistTaps="handled">
       <Card>
         {error ? <ErrorBox message={error} /> : null}
-        {!lead ? (
-          <View style={styles.scanBlock}>
-            <Button title="Scan Visiting Card" variant="secondary" onPress={openCardScan} />
-            <Text style={[text.muted, styles.hint]}>Reads the card on the phone, then fills in the fields below for you to check.</Text>
-          </View>
-        ) : null}
+        <View style={styles.scanBlock}>
+          <Button title="Scan Visiting Card" variant="secondary" onPress={openCardScan} />
+          <Text style={[text.muted, styles.hint]}>Reads the card on the phone, then fills in the fields below for you to check.</Text>
+        </View>
         <Field label="Contact name *" value={name} onChangeText={setName} maxLength={200} />
         <Field label="Company *" value={company} onChangeText={setCompany} maxLength={200} />
         <Field label="Email" value={email} onChangeText={setEmail} keyboardType="email-address" autoCapitalize="none" maxLength={200} />

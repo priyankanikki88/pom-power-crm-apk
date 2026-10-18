@@ -158,14 +158,31 @@ export function ExpenseDetailScreen({ route }: NativeStackScreenProps<MoreStackP
 }
 
 const MODES = ['CASH', 'UPI', 'BANK_TRANSFER', 'CHEQUE', 'OTHER'].map((value) => ({ value, label: enumLabel(value) }));
+const YES_NO = [
+  { value: 'no', label: 'No' },
+  { value: 'yes', label: 'Yes' },
+];
 const TYPES: Array<{ value: ExpenseType; label: string }> = [
   { value: 'LOCAL', label: 'Local Conveyance' },
+  { value: 'TOUR', label: 'Tour Expense' },
   { value: 'CASH_VOUCHER', label: 'Cash Payment' },
 ];
+const TOUR_HEADS = ['fare', 'hotel', 'boarding', 'lunch', 'telephone', 'porterage', 'conveyance', 'purchaseCourier', 'misc'] as const;
+const TOUR_HEAD_LABEL: Record<(typeof TOUR_HEADS)[number], string> = {
+  fare: 'Fare',
+  hotel: 'Hotel',
+  boarding: 'Boarding',
+  lunch: 'Lunch',
+  telephone: 'Telephone',
+  porterage: 'Porterage',
+  conveyance: 'Local conveyance',
+  purchaseCourier: 'Purchase / courier',
+  misc: 'Misc.',
+};
 
 /**
- * A new expense with one entry — the common field case (a local trip, or a cash payment). It is saved as a draft so the
- * bill photo can be added before submitting. Tour statements and branch / office expenses, and claims with several
+ * A new expense with one entry — the common field case (a local trip, a day's tour heads, or a cash payment). It is
+ * saved as a draft so the bill photo can be added before submitting. Branch / office expenses, and claims with several
  * entries, are made on the web CRM.
  */
 export function ExpenseFormScreen({ navigation }: NativeStackScreenProps<MoreStackParams, 'ExpenseForm'>) {
@@ -173,10 +190,34 @@ export function ExpenseFormScreen({ navigation }: NativeStackScreenProps<MoreSta
   const [type, setType] = useState<ExpenseType>('LOCAL');
   const [date, setDate] = useState(() => new Date());
   const [picking, setPicking] = useState(false);
-  const [f, setF] = useState({ title: '', fromPlace: '', toPlace: '', distanceKm: '', mode: '', amount: '', purpose: '', paidTo: '', paymentMode: 'CASH', reference: '' });
+  const [f, setF] = useState({
+    title: '',
+    fromPlace: '',
+    toPlace: '',
+    distanceKm: '',
+    mode: '',
+    amount: '',
+    purpose: '',
+    paidTo: '',
+    paymentMode: 'CASH',
+    reference: '',
+    placeVisited: '',
+    nightStay: 'no',
+    fare: '',
+    hotel: '',
+    boarding: '',
+    lunch: '',
+    telephone: '',
+    porterage: '',
+    conveyance: '',
+    purchaseCourier: '',
+    misc: '',
+  });
   const [error, setError] = useState<string | null>(null);
   const set = (k: keyof typeof f) => (v: string) => setF((x) => ({ ...x, [k]: v }));
   const opt = (v: string) => v.trim() || undefined;
+  const num = (v: string) => (v.trim() ? Number(v) : undefined);
+  const tourTotal = TOUR_HEADS.reduce((sum, h) => sum + (Number(f[h]) || 0), 0);
 
   const create = useMutation({
     mutationFn: () => {
@@ -184,8 +225,26 @@ export function ExpenseFormScreen({ navigation }: NativeStackScreenProps<MoreSta
       const line =
         type === 'LOCAL'
           ? { date: isoDate(date), fromPlace: opt(f.fromPlace), toPlace: opt(f.toPlace), distanceKm: f.distanceKm.trim() ? Number(f.distanceKm) : undefined, mode: opt(f.mode), amount, purpose: opt(f.purpose) }
-          : { date: isoDate(date), paidTo: opt(f.paidTo), purpose: opt(f.purpose), amount, paymentMode: f.paymentMode, reference: opt(f.reference) };
-      return sendOrQueue<Claim>({ title: `Expense — ${formatINR(amount)}, ${type === 'LOCAL' ? `${f.fromPlace.trim()} to ${f.toPlace.trim()}` : f.paidTo.trim()}`, method: 'POST', path: '/expenses', body: { type, title: opt(f.title), lines: [line] }, refresh: ['expenses'] });
+          : type === 'TOUR'
+            ? {
+                date: isoDate(date),
+                placeVisited: opt(f.placeVisited),
+                nightStay: f.nightStay === 'yes',
+                fare: num(f.fare),
+                hotel: num(f.hotel),
+                boarding: num(f.boarding),
+                lunch: num(f.lunch),
+                telephone: num(f.telephone),
+                porterage: num(f.porterage),
+                conveyance: num(f.conveyance),
+                purchaseCourier: num(f.purchaseCourier),
+                misc: num(f.misc),
+                purpose: opt(f.purpose),
+              }
+            : { date: isoDate(date), paidTo: opt(f.paidTo), purpose: opt(f.purpose), amount, paymentMode: f.paymentMode, reference: opt(f.reference) };
+      const label = type === 'LOCAL' ? `${f.fromPlace.trim()} to ${f.toPlace.trim()}` : type === 'TOUR' ? f.placeVisited.trim() : f.paidTo.trim();
+      const total = type === 'TOUR' ? tourTotal : amount;
+      return sendOrQueue<Claim>({ title: `Expense — ${formatINR(total)}, ${label}`, method: 'POST', path: '/expenses', body: { type, title: opt(f.title), lines: [line] }, refresh: ['expenses'] });
     },
     onSuccess: (res) => {
       void qc.invalidateQueries({ queryKey: ['expenses'] });
@@ -198,10 +257,17 @@ export function ExpenseFormScreen({ navigation }: NativeStackScreenProps<MoreSta
   });
 
   function submit() {
-    if (!(Number(f.amount) > 0)) return setError('Enter the amount.');
     if (f.distanceKm.trim() && !(Number(f.distanceKm) >= 0)) return setError('Enter a valid distance.');
-    if (type === 'LOCAL' && !(f.fromPlace.trim() && f.toPlace.trim())) return setError('Enter where you went from and to.');
-    if (type === 'CASH_VOUCHER' && !f.paidTo.trim()) return setError('Enter who was paid.');
+    if (type === 'LOCAL') {
+      if (!(Number(f.amount) > 0)) return setError('Enter the amount.');
+      if (!(f.fromPlace.trim() && f.toPlace.trim())) return setError('Enter where you went from and to.');
+    } else if (type === 'TOUR') {
+      if (!f.placeVisited.trim()) return setError('Enter the place visited.');
+      if (!(tourTotal > 0)) return setError('Enter at least one expense head.');
+    } else {
+      if (!(Number(f.amount) > 0)) return setError('Enter the amount.');
+      if (!f.paidTo.trim()) return setError('Enter who was paid.');
+    }
     setError(null);
     create.mutate();
   }
@@ -233,6 +299,24 @@ export function ExpenseFormScreen({ navigation }: NativeStackScreenProps<MoreSta
             <Field label="Mode (bike, auto, bus…)" value={f.mode} onChangeText={set('mode')} maxLength={60} />
             <Field label="Distance (km)" value={f.distanceKm} onChangeText={set('distanceKm')} keyboardType="decimal-pad" />
           </>
+        ) : type === 'TOUR' ? (
+          <>
+            <Field label="Place visited *" value={f.placeVisited} onChangeText={set('placeVisited')} maxLength={150} />
+            <ChipSelect label="Night stay" value={f.nightStay} options={YES_NO} onChange={(v) => v && set('nightStay')(v)} />
+            {Array.from({ length: Math.ceil(TOUR_HEADS.length / 2) }, (_, i) => TOUR_HEADS.slice(i * 2, i * 2 + 2)).map((pair, i) => (
+              <View key={i} style={styles.tourRow}>
+                {pair.map((h) => (
+                  <View key={h} style={styles.flex}>
+                    <Field label={`${TOUR_HEAD_LABEL[h]} (₹)`} value={f[h]} onChangeText={set(h)} keyboardType="decimal-pad" />
+                  </View>
+                ))}
+              </View>
+            ))}
+            <View style={styles.tourTotal}>
+              <Text style={text.muted}>Total (sum of the heads above)</Text>
+              <Text style={styles.amount}>{formatINR(tourTotal)}</Text>
+            </View>
+          </>
         ) : (
           <>
             <Field label="Paid to *" value={f.paidTo} onChangeText={set('paidTo')} maxLength={150} />
@@ -240,7 +324,7 @@ export function ExpenseFormScreen({ navigation }: NativeStackScreenProps<MoreSta
             <Field label="Reference / bill no." value={f.reference} onChangeText={set('reference')} maxLength={100} />
           </>
         )}
-        <Field label="Amount (₹) *" value={f.amount} onChangeText={set('amount')} keyboardType="decimal-pad" />
+        {type !== 'TOUR' ? <Field label="Amount (₹) *" value={f.amount} onChangeText={set('amount')} keyboardType="decimal-pad" /> : null}
         <Field label="Purpose" value={f.purpose} onChangeText={set('purpose')} multiline maxLength={2000} />
         <Field label="Title (optional)" value={f.title} onChangeText={set('title')} maxLength={200} />
         <Button title="Save as Draft" onPress={submit} loading={create.isPending} />
@@ -270,4 +354,6 @@ const styles = StyleSheet.create({
   photo: { marginBottom: space.sm },
   label: { fontSize: 13, fontWeight: '600', color: colors.muted, marginBottom: space.xs },
   dateBox: { minHeight: 48, borderWidth: 1, borderColor: colors.border, borderRadius: radius.md, paddingHorizontal: space.md, justifyContent: 'center', backgroundColor: colors.surface, marginBottom: space.md },
+  tourRow: { flexDirection: 'row', gap: space.md },
+  tourTotal: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: colors.bg, borderRadius: radius.md, paddingHorizontal: space.md, paddingVertical: space.sm, marginBottom: space.md },
 });

@@ -1,11 +1,12 @@
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import { NavigationContainer, useNavigation, type NavigationProp } from '@react-navigation/native';
+import { NavigationContainer, useFocusEffect, useNavigation, type NavigationProp } from '@react-navigation/native';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import * as Notifications from 'expo-notifications';
-import { useEffect } from 'react';
+import { useCallback, useEffect } from 'react';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from './auth/AuthContext';
 import { api } from './lib/api';
 import { AttendanceBoardScreen } from './screens/AttendanceBoardScreen';
@@ -189,7 +190,14 @@ function QuotationsNavigator() {
  * the same ['service','summary'] query HomeScreen.tsx already makes, so this costs no extra request in practice.
  */
 function ServiceHomeRouter(props: NativeStackScreenProps<ServiceStackParams, 'ServiceHome'>) {
-  const { data } = useQuery({ queryKey: ['service', 'summary'], queryFn: () => api.get<{ coordinator: boolean }>('/service/summary') });
+  const { data, refetch } = useQuery({ queryKey: ['service', 'summary'], queryFn: () => api.get<{ coordinator: boolean }>('/service/summary') });
+  // Whether this account is a coordinator can change (an admin reassigning its role) without the app ever being
+  // closed; re-check every time this tab is looked at, not just on its first mount, which tab screens otherwise skip.
+  useFocusEffect(
+    useCallback(() => {
+      void refetch();
+    }, [refetch]),
+  );
   if (data && !data.coordinator) return <MyServiceJobsScreen {...props} />;
   return <ServiceScreen {...props} />;
 }
@@ -358,9 +366,18 @@ function AppTabs() {
  */
 function SalesAppTabs() {
   usePushNavigation('Dashboard');
+  const insets = useSafeAreaInsets();
   return (
-    <Tabs.Navigator screenOptions={{ headerShown: false, tabBarActiveTintColor: brand.blue, tabBarInactiveTintColor: colors.muted, tabBarLabelStyle: styles.tabLabel }}>
-      <Tabs.Screen name="Dashboard" component={SalesNavigator} options={{ tabBarIcon: tabIcon('⌂') }} />
+    <Tabs.Navigator
+      screenOptions={{
+        headerShown: false,
+        tabBarActiveTintColor: brand.blue,
+        tabBarInactiveTintColor: colors.muted,
+        tabBarLabelStyle: styles.tabLabel,
+        tabBarStyle: { height: 56 + insets.bottom, paddingBottom: insets.bottom + 6, paddingTop: 6 },
+      }}
+    >
+      <Tabs.Screen name="Dashboard" component={SalesNavigator} options={{ tabBarLabel: 'Home', tabBarIcon: tabIcon('⌂') }} />
       <Tabs.Screen name="FollowUps" component={FollowUpsNavigator} options={{ title: 'Follow-up', tabBarLabel: 'Follow-up', tabBarIcon: tabIcon('✆') }} />
       <Tabs.Screen name="Products" component={ProductsNavigator} options={{ title: 'Product', tabBarLabel: 'Product', tabBarIcon: tabIcon('▦') }} />
       <Tabs.Screen name="Service" component={ServiceNavigator} options={{ title: 'Service Status', tabBarLabel: 'Service Status', tabBarIcon: tabIcon('⚙') }} />

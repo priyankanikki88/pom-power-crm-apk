@@ -1,5 +1,6 @@
 import { useNavigation, type NavigationProp } from '@react-navigation/native';
 import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '../auth/AuthContext';
 import { brand } from '../theme';
 
@@ -12,6 +13,7 @@ type Tab = 'home' | 'attendance' | 'profile';
 export function SalesTopBar({ active }: { active: Tab }) {
   const navigation = useNavigation<NavigationProp<Record<string, object | undefined>>>();
   const { user, logout } = useAuth();
+  const insets = useSafeAreaInsets();
 
   function onProfile() {
     Alert.alert(user?.fullName ?? 'Profile', user?.email ?? undefined, [
@@ -21,7 +23,7 @@ export function SalesTopBar({ active }: { active: Tab }) {
   }
 
   return (
-    <View style={styles.bar}>
+    <View style={[styles.bar, { paddingTop: insets.top + 10 }]}>
       <Pressable style={[styles.item, styles.pill, active === 'home' && styles.pillActive]} onPress={() => navigation.navigate('SalesHome')} accessibilityRole="button" accessibilityLabel="Home">
         <Text style={[styles.icon, active === 'home' ? styles.iconActive : styles.iconOn]}>⌂</Text>
         <Text style={[styles.label, active === 'home' ? styles.labelActive : styles.labelOn]}>Home</Text>

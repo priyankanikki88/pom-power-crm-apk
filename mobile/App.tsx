@@ -1,4 +1,4 @@
-import { QueryClient, useQueryClient } from '@tanstack/react-query';
+import { focusManager, QueryClient, useQueryClient } from '@tanstack/react-query';
 import { PersistQueryClientProvider } from '@tanstack/react-query-persist-client';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
@@ -48,7 +48,21 @@ function OutboxRunner() {
   return null;
 }
 
+/**
+ * React Query's own focus manager listens for the browser's `visibilitychange` event, which does not exist in React
+ * Native, so returning to the app from the background never refetched stale data on its own — a role or permission
+ * change made on the web CRM, for instance, stayed invisible until the screen happened to remount. Wiring it to
+ * AppState is the standard React Native integration (TanStack's own docs) and fixes that for every screen at once.
+ */
+function useRefetchOnForeground() {
+  useEffect(() => {
+    const sub = AppState.addEventListener('change', (status) => focusManager.setFocused(status === 'active'));
+    return () => sub.remove();
+  }, []);
+}
+
 export default function App() {
+  useRefetchOnForeground();
   return (
     <SafeAreaProvider>
       <PersistQueryClientProvider client={queryClient} persistOptions={{ persister, maxAge: SAVED_DATA_MAX_AGE, dehydrateOptions: { shouldDehydrateQuery: (q) => q.state.status === 'success' && shouldSaveQuery(q.queryKey) } }}>

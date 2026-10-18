@@ -78,7 +78,8 @@ const styles = StyleSheet.create({
   dashboardHint: { fontSize: 12.5, color: colors.muted, marginTop: 2 },
   chevron: { fontSize: 24, color: colors.muted },
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: space.md },
-  tile: { width: '31%', alignItems: 'center', gap: space.sm, backgroundColor: colors.surface, borderRadius: radius.lg, borderWidth: 1, borderColor: colors.border, paddingVertical: space.lg },
+  // 3 columns with a gap between them: 31% left too little room for the gaps on narrower phones and wrapped unevenly.
+  tile: { width: '30%', alignItems: 'center', gap: space.sm, backgroundColor: colors.surface, borderRadius: radius.lg, borderWidth: 1, borderColor: colors.border, paddingVertical: space.lg },
   tileIcon: { width: 52, height: 52, borderRadius: 26, alignItems: 'center', justifyContent: 'center' },
   tileGlyph: { fontSize: 22, fontWeight: '700' },
   tileLabel: { fontSize: 12.5, fontWeight: '600', color: colors.text, textAlign: 'center' },

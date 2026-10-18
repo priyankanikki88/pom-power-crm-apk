@@ -3,6 +3,7 @@ import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useEffect, useLayoutEffect, useState } from 'react';
 import { ActivityIndicator, FlatList, Pressable, RefreshControl, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useAuth } from '../auth/AuthContext';
+import { Segmented } from '../components/inputs';
 import { Badge, Empty } from '../components/ui';
 import { api, ApiError } from '../lib/api';
 import { enumLabel } from '../lib/format';
@@ -11,11 +12,17 @@ import { colors, radius, space } from '../theme';
 import type { CustomerSummary, Paginated } from '../types';
 
 const PAGE_SIZE = 25;
+type Scope = 'mine' | 'all';
+const SCOPE_TABS: Array<{ value: Scope; label: string }> = [
+  { value: 'mine', label: 'My Customers' },
+  { value: 'all', label: 'All Customers' },
+];
 
-/** Customer list: server-side search (name, code, GSTIN, mobile — same endpoint as the web CRM), loaded a page at a time. */
+/** Customer list: server-side search (name, code, GSTIN, mobile — same endpoint as the web CRM), loaded a page at a time. "My Customers" (the sales person's own) is the default for Sales; everyone else starts on "All" as before. */
 export function CustomersScreen({ navigation }: NativeStackScreenProps<CustomersStackParams, 'CustomerList'>) {
-  const { hasPermission } = useAuth();
+  const { user, hasPermission } = useAuth();
   const canAdd = hasPermission('customer.manage');
+  const isSales = user?.userRoles?.some((r) => r.role.name === 'Sales') ?? false;
   useLayoutEffect(() => {
     navigation.setOptions({
       headerRight: canAdd
@@ -27,6 +34,7 @@ export function CustomersScreen({ navigation }: NativeStackScreenProps<Customers
         : undefined,
     });
   }, [navigation, canAdd]);
+  const [scope, setScope] = useState<Scope>(isSales ? 'mine' : 'all');
   const [input, setInput] = useState('');
   const [search, setSearch] = useState('');
   // Wait for a pause in typing before asking the server.
@@ -36,9 +44,9 @@ export function CustomersScreen({ navigation }: NativeStackScreenProps<Customers
   }, [input]);
 
   const list = useInfiniteQuery({
-    queryKey: ['customers', search],
+    queryKey: ['customers', search, scope, user?.id],
     initialPageParam: 1,
-    queryFn: ({ pageParam }) => api.get<Paginated<CustomerSummary>>('/customers', { search: search || undefined, page: pageParam, pageSize: PAGE_SIZE }),
+    queryFn: ({ pageParam }) => api.get<Paginated<CustomerSummary>>('/customers', { search: search || undefined, assignedTo: scope === 'mine' ? user?.id : undefined, page: pageParam, pageSize: PAGE_SIZE }),
     getNextPageParam: (last) => (last.page * last.pageSize < last.total ? last.page + 1 : undefined),
   });
   const items = list.data?.pages.flatMap((p) => p.items) ?? [];
@@ -46,6 +54,7 @@ export function CustomersScreen({ navigation }: NativeStackScreenProps<Customers
 
   return (
     <View style={styles.screen}>
+      <Segmented value={scope} options={SCOPE_TABS} onChange={setScope} />
       <View style={styles.searchBox}>
         <TextInput
           value={input}

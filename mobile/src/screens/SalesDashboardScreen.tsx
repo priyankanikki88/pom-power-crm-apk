@@ -217,7 +217,8 @@ const styles = StyleSheet.create({
   chartBar: { width: 34, borderRadius: 6 },
   chartMonth: { fontSize: 12, color: colors.muted },
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: space.md },
-  statCard: { width: '31%', flexGrow: 1, backgroundColor: colors.surface, borderRadius: radius.lg, borderWidth: 1, borderColor: colors.border, padding: space.md },
+  // 3 columns with a gap between them: 31% + flexGrow left too little, uneven room for the gaps and wrapped unevenly.
+  statCard: { width: '30%', backgroundColor: colors.surface, borderRadius: radius.lg, borderWidth: 1, borderColor: colors.border, padding: space.md },
   cardTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   cardIcon: { width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center' },
   cardGlyph: { fontSize: 16, fontWeight: '700' },
