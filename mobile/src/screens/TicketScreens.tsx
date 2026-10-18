@@ -1,7 +1,7 @@
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { ActivityIndicator, Linking, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { CustomerPicker, type PickedCustomer } from '../components/CustomerPicker';
 import { ChipSelect } from '../components/inputs';
@@ -15,13 +15,19 @@ import { formatDate } from '../lib/dates';
 import { enumLabel, formatINR } from '../lib/format';
 import type { ServiceStackParams } from '../navigation';
 import { colors, radius, space } from '../theme';
-import type { TicketDetail } from '../types';
+import type { Paginated, ProductVariant, TicketDetail } from '../types';
 import { SERVICE_TONE } from './ServiceScreen';
 
 const errorText = (err: unknown, fallback: string) => (err instanceof ApiError ? err.message : fallback);
 const pad = (n: number) => String(n).padStart(2, '0');
 const isoDate = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+const variantTitle = (v: ProductVariant) => `${v.productName ?? v.model.name}${v.rating ? ` · ${v.rating}` : ''}`;
 const PRIORITIES = ['LOW', 'MEDIUM', 'HIGH', 'CRITICAL'].map((value) => ({ value, label: enumLabel(value) }));
+const RESOLUTION_OPTIONS = ['RESOLVED', 'PARTIALLY_RESOLVED', 'PENDING_PARTS', 'ESCALATED'].map((value) => ({ value, label: enumLabel(value) }));
+const CONFIRM_OPTIONS = [
+  { value: 'NONE', label: 'Skip for now' },
+  { value: 'OTP', label: 'Confirm by OTP' },
+];
 
 /**
  * One service ticket (complaint). The assigned engineer works it from here: Start Work, file the service report, note
@@ -34,12 +40,41 @@ export function TicketDetailScreen({ route }: NativeStackScreenProps<ServiceStac
   const q = useQuery({ queryKey: ['service', 'ticket', id], queryFn: () => api.get<TicketDetail>(`/service-tickets/${id}`) });
   const t = q.data;
   const [error, setError] = useState<string | null>(null);
+  const [arrivalTime, setArrivalTime] = useState<Date | null>(null);
+  const [pickingArrival, setPickingArrival] = useState(false);
+  const [faultFound, setFaultFound] = useState('');
   const [workDone, setWorkDone] = useState('');
-  const [part, setPart] = useState({ partName: '', qty: '1', cost: '' });
+  const [resolutionStatus, setResolutionStatus] = useState<string | null>(null);
+  const [confirmMethod, setConfirmMethod] = useState<string | null>('NONE');
+  const [otpCode, setOtpCode] = useState('');
+  const [otpSentTo, setOtpSentTo] = useState<string | null>(null);
+  const [part, setPart] = useState<{ productVariantId?: string; partName: string; qty: string; cost: string }>({ partName: '', qty: '1', cost: '' });
+  const [partInput, setPartInput] = useState('');
+  const [partSearch, setPartSearch] = useState('');
+  useEffect(() => {
+    const t = setTimeout(() => setPartSearch(partInput.trim()), 350);
+    return () => clearTimeout(t);
+  }, [partInput]);
+  const partResults = useQuery({
+    queryKey: ['products', 'picker', partSearch],
+    queryFn: () => api.get<Paginated<ProductVariant>>('/products', { search: partSearch, active: 'true', pageSize: 8 }),
+    enabled: partSearch.length >= 2,
+  });
   const [revisitDate, setRevisitDate] = useState(() => new Date(Date.now() + 24 * 3600 * 1000));
   const [pickingDate, setPickingDate] = useState(false);
   const [revisitReason, setRevisitReason] = useState('');
   const waiting = useOutbox().filter((e) => e.path.startsWith(`/service-tickets/${id}/`)).length;
+
+  // An OTP is time-sensitive — it must actually reach the customer now, so this goes straight to the server rather
+  // than through sendOrQueue's offline-friendly flow (which would silently queue it for "later", defeating the point).
+  const sendOtp = useMutation({
+    mutationFn: () => api.post<{ phone: string; expiresAt: string }>(`/service-tickets/${id}/report-otp`, {}),
+    onSuccess: (res) => {
+      setError(null);
+      setOtpSentTo(res.phone);
+    },
+    onError: (err) => setError(errorText(err, 'Could not send the OTP.')),
+  });
 
   const act = useMutation({
     // Field work is often done where there is no network: the entry is kept on the phone and sent, in order, later.
@@ -47,7 +82,15 @@ export function TicketDetailScreen({ route }: NativeStackScreenProps<ServiceStac
     onSuccess: (res, vars) => {
       if (res.queued) savedOnPhoneAlert();
       void qc.invalidateQueries({ queryKey: ['service'] });
-      if (vars.action === 'reports') setWorkDone('');
+      if (vars.action === 'reports') {
+        setArrivalTime(null);
+        setFaultFound('');
+        setWorkDone('');
+        setResolutionStatus(null);
+        setConfirmMethod('NONE');
+        setOtpCode('');
+        setOtpSentTo(null);
+      }
       if (vars.action === 'parts') setPart({ partName: '', qty: '1', cost: '' });
       if (vars.action === 'revisits') setRevisitReason('');
     },
@@ -69,14 +112,21 @@ export function TicketDetailScreen({ route }: NativeStackScreenProps<ServiceStac
 
   function addReport() {
     if (workDone.trim().length < 5) return setError('Describe the work done (at least a few words).');
-    run('reports', { workDone: workDone.trim() });
+    if (confirmMethod === 'OTP' && !otpCode.trim()) return setError('Enter the OTP the customer read out — or switch to "Skip for now".');
+    run('reports', {
+      arrivalTime: arrivalTime ? arrivalTime.toISOString() : undefined,
+      faultFound: faultFound.trim() || undefined,
+      workDone: workDone.trim(),
+      resolutionStatus: resolutionStatus || undefined,
+      otpCode: confirmMethod === 'OTP' ? otpCode.trim() : undefined,
+    });
   }
   function addPart() {
     const qty = Number(part.qty);
     const cost = part.cost.trim() ? Number(part.cost) : 0;
-    if (part.partName.trim().length < 2) return setError('Enter the part name.');
+    if (!part.productVariantId && part.partName.trim().length < 2) return setError('Enter the part name, or pick one from the catalogue.');
     if (!(qty > 0) || !(cost >= 0)) return setError('Enter a valid quantity and cost.');
-    run('parts', { partName: part.partName.trim(), qty, cost });
+    run('parts', { productVariantId: part.productVariantId, partName: part.partName.trim() || undefined, qty, cost });
   }
   function bookRevisit() {
     if (revisitReason.trim().length < 3) return setError('Write why a revisit is needed.');
@@ -148,9 +198,34 @@ export function TicketDetailScreen({ route }: NativeStackScreenProps<ServiceStac
         ))}
         {t.canWork && working ? (
           <View style={styles.gap}>
+            <Text style={styles.label}>Arrival time (optional)</Text>
+            <Pressable style={styles.dateBox} onPress={() => setPickingArrival(true)} accessibilityRole="button" accessibilityLabel="Arrival time">
+              <Text style={[text.body, !arrivalTime && text.muted]}>{arrivalTime ? arrivalTime.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }) : 'Not set — tap to record'}</Text>
+            </Pressable>
+            {pickingArrival ? (
+              <DateTimePicker
+                value={arrivalTime ?? new Date()}
+                mode="time"
+                onChange={(event, picked) => {
+                  setPickingArrival(false);
+                  if (event.type !== 'dismissed' && picked) setArrivalTime(picked);
+                }}
+              />
+            ) : null}
+            <Field label="Fault found (optional)" value={faultFound} onChangeText={setFaultFound} multiline maxLength={4000} />
             <Field label="Work done *" value={workDone} onChangeText={setWorkDone} multiline maxLength={8000} />
+            <ChipSelect label="Resolution status (optional)" value={resolutionStatus} options={RESOLUTION_OPTIONS} onChange={setResolutionStatus} allowClear />
+            <ChipSelect label="Customer confirmation" value={confirmMethod} options={CONFIRM_OPTIONS} onChange={setConfirmMethod} />
+            {confirmMethod === 'OTP' ? (
+              <View style={styles.gap}>
+                <Button title={otpSentTo ? `Resend OTP (sent to ${otpSentTo})` : 'Send OTP to Customer'} variant="secondary" loading={sendOtp.isPending} disabled={sendOtp.isPending} onPress={() => sendOtp.mutate()} />
+                {otpSentTo ? <Field label="OTP from customer *" value={otpCode} onChangeText={setOtpCode} keyboardType="number-pad" maxLength={8} /> : null}
+                <Text style={[text.muted, styles.note2]}>A signature can also be captured — that stays on the web CRM for now.</Text>
+              </View>
+            ) : (
+              <Text style={[text.muted, styles.note2]}>The customer's signature on a report is taken on the web CRM.</Text>
+            )}
             <Button title="Add Report" variant="secondary" loading={doing('reports')} disabled={act.isPending} onPress={addReport} />
-            <Text style={[text.muted, styles.note2]}>The customer's signature on a report is taken on the web CRM.</Text>
           </View>
         ) : null}
       </Card>
@@ -168,7 +243,37 @@ export function TicketDetailScreen({ route }: NativeStackScreenProps<ServiceStac
         {t.parts.length > 0 ? <Row label="Parts total" value={formatINR(t.partsTotal)} /> : null}
         {t.canWork && working ? (
           <View style={styles.gap}>
-            <Field label="Part name" value={part.partName} onChangeText={(v) => setPart((p) => ({ ...p, partName: v }))} maxLength={160} />
+            {part.productVariantId ? (
+              <View style={styles.pickedPart}>
+                <Text style={[text.body, styles.flex]} numberOfLines={1}>
+                  {part.partName}
+                </Text>
+                <Pressable onPress={() => setPart((p) => ({ ...p, productVariantId: undefined, partName: '' }))} accessibilityRole="button" accessibilityLabel="Change part">
+                  <Text style={styles.changeLink}>Change</Text>
+                </Pressable>
+              </View>
+            ) : (
+              <>
+                <Field label="Pick from catalogue (type 2+ letters), or just type a part name below" value={partInput} onChangeText={setPartInput} autoCapitalize="none" autoCorrect={false} placeholder="Name, code, rating…" />
+                {partResults.data?.items.map((v) => (
+                  <Pressable
+                    key={v.id}
+                    style={styles.result}
+                    onPress={() => {
+                      setPart((prev) => ({ ...prev, productVariantId: v.id, partName: variantTitle(v) }));
+                      setPartInput('');
+                      setPartSearch('');
+                    }}
+                    accessibilityRole="button"
+                  >
+                    <Text style={text.body}>{variantTitle(v)}</Text>
+                    <Text style={text.muted}>{v.productCode}</Text>
+                  </Pressable>
+                ))}
+                {partResults.data && partResults.data.items.length === 0 ? <Text style={text.muted}>No product matches.</Text> : null}
+              </>
+            )}
+            <Field label="Part name" value={part.partName} onChangeText={(v) => setPart((p) => ({ ...p, partName: v, productVariantId: undefined }))} maxLength={160} editable={!part.productVariantId} />
             <View style={styles.two}>
               <View style={styles.flex}>
                 <Field label="Qty" value={part.qty} onChangeText={(v) => setPart((p) => ({ ...p, qty: v }))} keyboardType="decimal-pad" />
@@ -310,6 +415,9 @@ const styles = StyleSheet.create({
   photo: { marginBottom: space.md, gap: 4 },
   entry: { paddingVertical: space.sm, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.border },
   partRow: { flexDirection: 'row', gap: space.sm, paddingVertical: space.sm, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.border },
+  pickedPart: { flexDirection: 'row', alignItems: 'center', gap: space.sm, backgroundColor: colors.primarySoft, borderRadius: radius.md, padding: space.md },
+  changeLink: { color: colors.primary, fontWeight: '700', fontSize: 13 },
+  result: { padding: space.md, borderWidth: 1, borderColor: colors.border, borderRadius: radius.md, marginBottom: space.sm, backgroundColor: colors.surface },
   two: { flexDirection: 'row', gap: space.sm },
   label: { fontSize: 13, fontWeight: '600', color: colors.muted, marginBottom: space.xs },
   dateBox: { minHeight: 48, borderWidth: 1, borderColor: colors.border, borderRadius: radius.md, paddingHorizontal: space.md, justifyContent: 'center', backgroundColor: colors.surface, marginBottom: space.md },

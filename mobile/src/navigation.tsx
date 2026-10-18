@@ -1,13 +1,16 @@
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { NavigationContainer, useNavigation, type NavigationProp } from '@react-navigation/native';
-import { useQueryClient } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import * as Notifications from 'expo-notifications';
 import { useEffect } from 'react';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useAuth } from './auth/AuthContext';
+import { api } from './lib/api';
 import { AttendanceBoardScreen } from './screens/AttendanceBoardScreen';
 import { AttendanceScreen } from './screens/AttendanceScreen';
+import { MyServiceJobsScreen } from './screens/MyServiceJobsScreen';
 import { ChangePasswordScreen } from './screens/ChangePasswordScreen';
 import { ExpenseDetailScreen, ExpenseFormScreen, ExpensesScreen } from './screens/ExpenseScreens';
 import { CustomerDetailScreen } from './screens/CustomerDetailScreen';
@@ -18,7 +21,7 @@ import { FollowUpFormScreen } from './screens/FollowUpFormScreen';
 import { FollowUpsScreen } from './screens/FollowUpsScreen';
 import { HomeScreen } from './screens/HomeScreen';
 import { LoginScreen } from './screens/LoginScreen';
-import { LeadActivityFormScreen, LeadFormScreen, LeadsScreen } from './screens/LeadScreens';
+import { LeadActivityFormScreen, LeadDetailScreen, LeadFormScreen, LeadsScreen } from './screens/LeadScreens';
 import { CardScanScreen } from './screens/CardScanScreen';
 import type { CardData } from './lib/cardScan';
 import { B2CCaseDetailScreen, B2CCaseFormScreen, B2CCasesScreen, DiscomFormScreen, DiscomsScreen } from './screens/DiscomScreens';
@@ -39,7 +42,14 @@ import { ServiceScreen } from './screens/ServiceScreen';
 import { TargetsScreen } from './screens/TargetsScreen';
 import { TaskDetailScreen, TaskFormScreen, TasksScreen, type TaskView } from './screens/TasksScreens';
 import { TicketDetailScreen, TicketFormScreen } from './screens/TicketScreens';
-import { colors } from './theme';
+import { ProductsScreen } from './screens/ProductsScreen';
+import { ProductDetailScreen } from './screens/ProductDetailScreen';
+import { ChatScreen } from './screens/ChatScreen';
+import { ChatThreadScreen } from './screens/ChatThreadScreen';
+import { ReportsScreen, ReportViewerScreen } from './screens/ReportsScreen';
+import { SalesDashboardScreen } from './screens/SalesDashboardScreen';
+import { SalesHomeScreen } from './screens/SalesHomeScreen';
+import { brand, colors } from './theme';
 
 export type CustomersStackParams = {
   CustomerList: undefined;
@@ -99,6 +109,7 @@ export type MoreStackParams = {
   TaskDetail: { id: string; view: TaskView; title: string };
   TaskForm: undefined;
   Leads: undefined;
+  LeadDetail: { id: string };
   /** No id = add a lead. */
   LeadForm: { id?: string } | undefined;
   /** Hands the scanned card back to whoever opened this screen. */
@@ -112,12 +123,31 @@ export type MoreStackParams = {
   DiscomForm: undefined;
 };
 
+/**
+ * The Sales role's own "Dashboard" tab: the Sales Home (action grid) and Sales Dashboard (stats/chart), plus every
+ * screen its tiles / stat cards lead to — reused straight from the stacks above rather than duplicated. A Sales-role
+ * user sees a 4-tab layout (Dashboard / Follow-up / Product / Service Status) instead of the usual one; see AppTabs.
+ */
+export type SalesStackParams = {
+  SalesHome: undefined;
+  SalesDashboard: undefined;
+  Reports: undefined;
+  ReportViewer: { id: string; title: string };
+  Chat: undefined;
+  ChatThread: { id: string; name: string };
+} & Pick<CustomersStackParams, 'CustomerList' | 'CustomerDetail' | 'CustomerForm'> &
+  Pick<QuotationsStackParams, 'QuotationList' | 'QuotationDetail' | 'QuotationForm' | 'DocDetail' | 'BillDetail'> &
+  Pick<MoreStackParams, 'Expenses' | 'ExpenseDetail' | 'ExpenseForm' | 'Targets' | 'Tours' | 'TourDetail' | 'TourForm' | 'Leads' | 'LeadDetail' | 'LeadForm' | 'CardScan' | 'LeadActivityForm' | 'Attendance' | 'Notifications'>;
+export type ProductsStackParams = { ProductList: undefined; ProductDetail: { id: string } };
+
 const Tabs = createBottomTabNavigator();
 const CustomersStack = createNativeStackNavigator<CustomersStackParams>();
 const FollowUpsStack = createNativeStackNavigator<FollowUpsStackParams>();
 const QuotationsStack = createNativeStackNavigator<QuotationsStackParams>();
 const ServiceStack = createNativeStackNavigator<ServiceStackParams>();
 const MoreStack = createNativeStackNavigator<MoreStackParams>();
+const SalesStack = createNativeStackNavigator<SalesStackParams>();
+const ProductsStack = createNativeStackNavigator<ProductsStackParams>();
 
 const header = { headerStyle: { backgroundColor: colors.navy }, headerTintColor: '#ffffff', headerTitleStyle: { fontWeight: '700' as const } };
 
@@ -153,10 +183,21 @@ function QuotationsNavigator() {
   );
 }
 
+/**
+ * A field engineer sees their own job list (MyServiceJobsScreen, matching the Service Engineer app mockup); a
+ * coordinator keeps the existing multi-kind Service screen (tickets/installations/revisits/surveys/warranty). Reuses
+ * the same ['service','summary'] query HomeScreen.tsx already makes, so this costs no extra request in practice.
+ */
+function ServiceHomeRouter(props: NativeStackScreenProps<ServiceStackParams, 'ServiceHome'>) {
+  const { data } = useQuery({ queryKey: ['service', 'summary'], queryFn: () => api.get<{ coordinator: boolean }>('/service/summary') });
+  if (data && !data.coordinator) return <MyServiceJobsScreen {...props} />;
+  return <ServiceScreen {...props} />;
+}
+
 function ServiceNavigator() {
   return (
     <ServiceStack.Navigator screenOptions={header}>
-      <ServiceStack.Screen name="ServiceHome" component={ServiceScreen} options={{ title: 'Service' }} />
+      <ServiceStack.Screen name="ServiceHome" component={ServiceHomeRouter} options={{ title: 'Service' }} />
       <ServiceStack.Screen name="TicketDetail" component={TicketDetailScreen} options={({ route }) => ({ title: route.params.no })} />
       <ServiceStack.Screen name="TicketForm" component={TicketFormScreen} options={{ title: 'Log Complaint' }} />
       <ServiceStack.Screen name="InstallationDetail" component={InstallationDetailScreen} options={({ route }) => ({ title: route.params.no })} />
@@ -192,6 +233,7 @@ function MoreNavigator() {
       <MoreStack.Screen name="TaskDetail" component={TaskDetailScreen} options={{ title: 'Task' }} />
       <MoreStack.Screen name="TaskForm" component={TaskFormScreen} options={{ title: 'Give Tasks' }} />
       <MoreStack.Screen name="Leads" component={LeadsScreen} options={{ title: 'Leads' }} />
+      <MoreStack.Screen name="LeadDetail" component={LeadDetailScreen} options={{ title: 'Lead' }} />
       <MoreStack.Screen name="LeadForm" component={LeadFormScreen} options={({ route }) => ({ title: route.params?.id ? 'Edit Lead' : 'Add Lead' })} />
       <MoreStack.Screen name="CardScan" component={CardScanScreen} options={{ title: 'Scan Visiting Card', headerShown: false }} />
       <MoreStack.Screen name="LeadActivityForm" component={LeadActivityFormScreen} options={({ route }) => ({ title: route.params?.id ? 'Edit Activity' : 'Schedule Follow-up / Event' })} />
@@ -204,6 +246,50 @@ function MoreNavigator() {
   );
 }
 
+function SalesNavigator() {
+  return (
+    <SalesStack.Navigator screenOptions={header}>
+      <SalesStack.Screen name="SalesHome" component={SalesHomeScreen} options={{ headerShown: false }} />
+      <SalesStack.Screen name="SalesDashboard" component={SalesDashboardScreen} options={{ headerShown: false }} />
+      <SalesStack.Screen name="CustomerList" component={CustomersScreen} options={{ title: 'Customers' }} />
+      <SalesStack.Screen name="CustomerDetail" component={CustomerDetailScreen} options={({ route }) => ({ title: route.params.name })} />
+      <SalesStack.Screen name="CustomerForm" component={CustomerFormScreen} options={({ route }) => ({ title: route.params?.id ? 'Edit Customer' : 'Add Customer' })} />
+      <SalesStack.Screen name="QuotationList" component={QuotationsScreen} options={{ title: 'Sales Documents' }} />
+      <SalesStack.Screen name="QuotationDetail" component={QuotationDetailScreen} options={({ route }) => ({ title: route.params.no })} />
+      <SalesStack.Screen name="QuotationForm" component={QuotationFormScreen} options={{ title: 'New Quotation' }} />
+      <SalesStack.Screen name="DocDetail" component={DocDetailScreen} options={({ route }) => ({ title: route.params.no || (route.params.kind === 'PROFORMA' ? 'Proforma Invoice' : 'Format-4') })} />
+      <SalesStack.Screen name="BillDetail" component={BillDetailScreen} options={({ route }) => ({ title: route.params.no || 'Bill' })} />
+      <SalesStack.Screen name="Expenses" component={ExpensesScreen} options={{ title: 'My Expenses' }} />
+      <SalesStack.Screen name="ExpenseDetail" component={ExpenseDetailScreen} options={({ route }) => ({ title: route.params.no })} />
+      <SalesStack.Screen name="ExpenseForm" component={ExpenseFormScreen} options={{ title: 'New Expense' }} />
+      <SalesStack.Screen name="Targets" component={TargetsScreen} options={{ title: 'Targets' }} />
+      <SalesStack.Screen name="Tours" component={ToursScreen} options={{ title: 'Tour Plans' }} />
+      <SalesStack.Screen name="TourDetail" component={TourDetailScreen} options={({ route }) => ({ title: route.params.no })} />
+      <SalesStack.Screen name="TourForm" component={TourFormScreen} options={({ route }) => ({ title: route.params?.id ? 'Edit Tour Plan' : 'Plan Tour' })} />
+      <SalesStack.Screen name="Leads" component={LeadsScreen} options={{ title: 'Leads' }} />
+      <SalesStack.Screen name="LeadDetail" component={LeadDetailScreen} options={{ title: 'Lead' }} />
+      <SalesStack.Screen name="LeadForm" component={LeadFormScreen} options={({ route }) => ({ title: route.params?.id ? 'Edit Lead' : 'Add Lead' })} />
+      <SalesStack.Screen name="CardScan" component={CardScanScreen} options={{ title: 'Scan Visiting Card', headerShown: false }} />
+      <SalesStack.Screen name="LeadActivityForm" component={LeadActivityFormScreen} options={({ route }) => ({ title: route.params?.id ? 'Edit Activity' : 'Schedule Follow-up / Event' })} />
+      <SalesStack.Screen name="Attendance" component={AttendanceScreen} options={{ title: 'Attendance' }} />
+      <SalesStack.Screen name="Notifications" component={NotificationsScreen} options={{ title: 'Notifications' }} />
+      <SalesStack.Screen name="Reports" component={ReportsScreen} options={{ title: 'Reports' }} />
+      <SalesStack.Screen name="ReportViewer" component={ReportViewerScreen} options={({ route }) => ({ title: route.params.title })} />
+      <SalesStack.Screen name="Chat" component={ChatScreen} options={{ title: 'Chat' }} />
+      <SalesStack.Screen name="ChatThread" component={ChatThreadScreen} options={({ route }) => ({ title: route.params.name })} />
+    </SalesStack.Navigator>
+  );
+}
+
+function ProductsNavigator() {
+  return (
+    <ProductsStack.Navigator screenOptions={header}>
+      <ProductsStack.Screen name="ProductList" component={ProductsScreen} options={{ title: 'Products' }} />
+      <ProductsStack.Screen name="ProductDetail" component={ProductDetailScreen} options={{ title: 'Product' }} />
+    </ProductsStack.Navigator>
+  );
+}
+
 /** Text glyph tab icons — no icon font to load, and each tab always carries its label too. */
 const tabIcon = (glyph: string) =>
   function TabIcon({ color }: { color: string }) {
@@ -212,8 +298,11 @@ const tabIcon = (glyph: string) =>
 
 let handledTap: string | null = null;
 
-/** A push that arrives while the app is open refreshes the unread count; tapping one (open or closed) opens Notifications. */
-function usePushNavigation() {
+/**
+ * A push that arrives while the app is open refreshes the unread count; tapping one (open or closed) opens
+ * Notifications, on whichever tab carries that screen — "More" for the usual tab set, "Dashboard" for Sales role.
+ */
+function usePushNavigation(notificationsTab: string = 'More') {
   const navigation = useNavigation<NavigationProp<Record<string, object | undefined>>>();
   const qc = useQueryClient();
   const tapped = Notifications.useLastNotificationResponse();
@@ -227,8 +316,8 @@ function usePushNavigation() {
     if (!tapId || tapId === handledTap) return;
     handledTap = tapId;
     void qc.invalidateQueries({ queryKey: ['notifications'] });
-    navigation.navigate('More', { screen: 'Notifications', initial: false });
-  }, [tapped, navigation, qc]);
+    navigation.navigate(notificationsTab, { screen: 'Notifications', initial: false });
+  }, [tapped, navigation, qc, notificationsTab]);
 }
 
 function AppTabs() {
@@ -261,6 +350,24 @@ function AppTabs() {
   );
 }
 
+/**
+ * The Sales role's own 4-tab layout (Dashboard / Follow-up / Product / Service Status) — the Sales Person Dashboard
+ * and Home screens replace the usual "My Dashboard" Home tab, and Customers / Sales documents / Targets / Tours /
+ * Leads / Expenses move from their own tabs into the Dashboard tab's own stack (see SalesNavigator), reached from
+ * the Home action grid instead. Every other role keeps AppTabs unchanged.
+ */
+function SalesAppTabs() {
+  usePushNavigation('Dashboard');
+  return (
+    <Tabs.Navigator screenOptions={{ headerShown: false, tabBarActiveTintColor: brand.blue, tabBarInactiveTintColor: colors.muted, tabBarLabelStyle: styles.tabLabel }}>
+      <Tabs.Screen name="Dashboard" component={SalesNavigator} options={{ tabBarIcon: tabIcon('⌂') }} />
+      <Tabs.Screen name="FollowUps" component={FollowUpsNavigator} options={{ title: 'Follow-up', tabBarLabel: 'Follow-up', tabBarIcon: tabIcon('✆') }} />
+      <Tabs.Screen name="Products" component={ProductsNavigator} options={{ title: 'Product', tabBarLabel: 'Product', tabBarIcon: tabIcon('▦') }} />
+      <Tabs.Screen name="Service" component={ServiceNavigator} options={{ title: 'Service Status', tabBarLabel: 'Service Status', tabBarIcon: tabIcon('⚙') }} />
+    </Tabs.Navigator>
+  );
+}
+
 /** Which part of the app the user sees: a splash while the stored session is checked, sign-in, the forced password change, or the app. */
 export function RootNavigator() {
   const { user, loading } = useAuth();
@@ -273,11 +380,8 @@ export function RootNavigator() {
   }
   if (!user) return <LoginScreen />;
   if (user.mustChangePassword) return <ChangePasswordScreen />;
-  return (
-    <NavigationContainer>
-      <AppTabs />
-    </NavigationContainer>
-  );
+  const isSales = user.userRoles?.some((r) => r.role.name === 'Sales') ?? false;
+  return <NavigationContainer>{isSales ? <SalesAppTabs /> : <AppTabs />}</NavigationContainer>;
 }
 
 const styles = StyleSheet.create({

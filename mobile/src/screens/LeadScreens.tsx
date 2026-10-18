@@ -2,7 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useNavigation, type NavigationProp } from '@react-navigation/native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useLayoutEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, Alert, FlatList, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Alert, FlatList, Linking, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useAuth } from '../auth/AuthContext';
 import { ChipSelect, DateField, DateTimeField, Segmented } from '../components/inputs';
 import { Button, Card, Empty, ErrorBox, Field, Row, text } from '../components/ui';
@@ -27,7 +27,7 @@ interface Person {
   id: string;
   fullName: string;
 }
-interface Lead {
+export interface Lead {
   id: string;
   name: string;
   company: string;
@@ -38,8 +38,11 @@ interface Lead {
   value: number;
   owner: Person | null;
   follow: string | null;
+  location: string | null;
+  requirement: string | null;
+  remark: string | null;
 }
-interface LeadActivity {
+export interface LeadActivity {
   id: string;
   type: string;
   subject: string;
@@ -51,11 +54,11 @@ interface LeadActivity {
   status: string;
   details: string | null;
 }
-interface LeadList {
+export interface LeadList {
   items: Lead[];
   summary: { total: number; open: number; openValue: number; dueToday: number };
 }
-interface Schedule {
+export interface Schedule {
   today: string;
   items: LeadActivity[];
   summary: { open: number; overdue: number; dueToday: number; completed: number };
@@ -67,8 +70,8 @@ interface Overview {
   upcoming: LeadActivity[];
 }
 
-const useLeads = (enabled = true) => useQuery({ queryKey: ['leads', 'list'], queryFn: () => api.get<LeadList>('/leads'), enabled });
-const useSchedule = (enabled = true) => useQuery({ queryKey: ['leads', 'activities'], queryFn: () => api.get<Schedule>('/lead-activities'), enabled });
+export const useLeads = (enabled = true) => useQuery({ queryKey: ['leads', 'list'], queryFn: () => api.get<LeadList>('/leads'), enabled });
+export const useSchedule = (enabled = true) => useQuery({ queryKey: ['leads', 'activities'], queryFn: () => api.get<Schedule>('/lead-activities'), enabled });
 const linkLabel = (a: LeadActivity) => (a.lead ? `${a.lead.company} · ${a.lead.name}` : a.customer ? a.customer.name : null);
 type Tab = 'leads' | 'schedule' | 'pipeline';
 const TABS: Array<{ value: Tab; label: string }> = [
@@ -100,7 +103,7 @@ export function LeadsScreen({ navigation }: NativeStackScreenProps<MoreStackPara
       <View>
         <Segmented value={tab} options={TABS} onChange={setTab} />
       </View>
-      {tab === 'leads' ? <LeadList onOpen={canManage ? (id) => navigation.navigate('LeadForm', { id }) : undefined} /> : null}
+      {tab === 'leads' ? <LeadList onOpen={(id) => navigation.navigate('LeadDetail', { id })} /> : null}
       {tab === 'schedule' ? <ScheduleList canManage={canManage} onOpen={canManage ? (id) => navigation.navigate('LeadActivityForm', { id }) : undefined} /> : null}
       {tab === 'pipeline' ? <Pipeline /> : null}
     </View>
@@ -310,6 +313,127 @@ function Pipeline() {
       {o.todayItems.length === 0 ? <Empty title="No follow-ups due today" /> : o.todayItems.map((a) => <ActivityRow key={a.id} a={a} today={today} />)}
       <Text style={[text.h2, styles.section]}>Upcoming schedule</Text>
       {o.upcoming.length === 0 ? <Empty title="Schedule is clear" /> : o.upcoming.map((a) => <ActivityRow key={a.id} a={a} today={today} />)}
+    </ScrollView>
+  );
+}
+
+// ------------------------------------------------------------------ lead detail
+
+const digits = (phone: string) => phone.replace(/[^\d+]/g, '');
+/** WhatsApp needs the country code; an Indian 10-digit mobile gets 91 in front. */
+const whatsappNumber = (phone: string) => {
+  const d = phone.replace(/\D/g, '');
+  return d.length === 10 ? `91${d}` : d;
+};
+
+function LeadContactActions({ phone }: { phone: string }) {
+  return (
+    <View style={styles.actions}>
+      <Pressable style={[styles.action, { backgroundColor: colors.primarySoft }]} onPress={() => void Linking.openURL(`tel:${digits(phone)}`)} accessibilityRole="button" accessibilityLabel={`Call ${phone}`}>
+        <Text style={[styles.actionText, { color: colors.primaryDark }]}>Call</Text>
+      </Pressable>
+      <Pressable style={[styles.action, { backgroundColor: colors.successSoft }]} onPress={() => void Linking.openURL(`https://wa.me/${whatsappNumber(phone)}`)} accessibilityRole="button" accessibilityLabel={`WhatsApp ${phone}`}>
+        <Text style={[styles.actionText, { color: colors.success }]}>WhatsApp</Text>
+      </Pressable>
+    </View>
+  );
+}
+
+/** One lead: identity, call/WhatsApp, details, requirement/remark and its follow-up schedule. Edit and Convert to Customer for roles that may; Documents/Notes from the mockup have no backend data to show yet, so they're left off rather than faked. */
+export function LeadDetailScreen({ route, navigation }: NativeStackScreenProps<MoreStackParams, 'LeadDetail'>) {
+  const { id } = route.params;
+  const { hasPermission } = useAuth();
+  const qc = useQueryClient();
+  const navToCustomer = useNavigation<NavigationProp<Record<string, object | undefined>>>();
+  const canManage = hasPermission('lead.manage');
+  const canAddCustomer = hasPermission('customer.manage');
+  const list = useLeads();
+  const schedule = useSchedule();
+  const lead = list.data?.items.find((l) => l.id === id);
+  const followUps = (schedule.data?.items ?? []).filter((a) => a.lead?.id === id);
+  const today = schedule.data?.today ?? isoDay(new Date());
+
+  const convert = useMutation({
+    mutationFn: () => (lead!.stage === 'Won' ? Promise.resolve() : api.patch(`/leads/${lead!.id}`, { stage: 'Won' })),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ['leads'] });
+      navToCustomer.navigate('Customers', { screen: 'CustomerForm', params: { fromLead: { name: lead!.company, contactName: lead!.name, phone: lead!.phone ?? undefined, email: lead!.email ?? undefined } } });
+    },
+  });
+
+  useLayoutEffect(() => {
+    navigation.setOptions({
+      headerRight: canManage
+        ? () => (
+            <Pressable onPress={() => navigation.navigate('LeadForm', { id })} hitSlop={12} accessibilityRole="button" accessibilityLabel="Edit lead">
+              <Text style={styles.headerBtn}>Edit</Text>
+            </Pressable>
+          )
+        : undefined,
+    });
+  }, [navigation, canManage, id]);
+
+  if (list.isLoading) return <ActivityIndicator style={styles.loading} color={colors.primary} />;
+  if (!lead) return <View style={styles.list}><ErrorBox message={errorText(list.error, 'This lead could not be found.')} /></View>;
+
+  return (
+    <ScrollView
+      style={styles.screen}
+      contentContainerStyle={styles.list}
+      refreshControl={
+        <RefreshControl
+          refreshing={list.isRefetching || schedule.isRefetching}
+          onRefresh={() => {
+            void list.refetch();
+            void schedule.refetch();
+          }}
+        />
+      }
+    >
+      <Card>
+        <View style={styles.itemHead}>
+          <Text style={[text.h1, { flex: 1 }]}>{lead.name}</Text>
+          <Text style={[styles.tag, { color: STAGE_TONE[lead.stage] ?? colors.muted }]}>{lead.stage}</Text>
+        </View>
+        <Text style={text.muted}>{lead.company}</Text>
+        {lead.phone ? <LeadContactActions phone={lead.phone} /> : null}
+        {canAddCustomer && lead.stage !== 'Lost' ? (
+          <View style={styles.plan}>
+            <Button title={lead.stage === 'Won' ? 'Create Customer' : 'Convert to Customer'} variant="secondary" loading={convert.isPending} onPress={() => convert.mutate()} />
+          </View>
+        ) : null}
+      </Card>
+
+      <Card>
+        <Text style={[text.h2, styles.section]}>Details</Text>
+        <Row label="Source" value={lead.source} />
+        <Row label="Owner" value={lead.owner?.fullName ?? 'Unassigned'} />
+        <Row label="Email" value={lead.email} />
+        <Row label="Phone" value={lead.phone} />
+        <Row label="Deal value" value={formatINR(lead.value)} />
+        <Row label="Location" value={lead.location} />
+        <Row label="Next follow-up" value={lead.follow ? formatDate(lead.follow) : null} />
+      </Card>
+
+      {lead.requirement ? (
+        <Card>
+          <Text style={[text.h2, styles.section]}>Requirement</Text>
+          <Text style={text.body}>{lead.requirement}</Text>
+        </Card>
+      ) : null}
+
+      {lead.remark ? (
+        <Card>
+          <Text style={[text.h2, styles.section]}>Remark</Text>
+          <Text style={text.body}>{lead.remark}</Text>
+        </Card>
+      ) : null}
+
+      <Card>
+        <Text style={[text.h2, styles.section]}>Follow-ups & activity</Text>
+        {schedule.isError ? <ErrorBox message={errorText(schedule.error, 'Could not load the follow-up schedule.')} /> : null}
+        {followUps.length === 0 ? <Empty title="No scheduled activity for this lead" /> : followUps.map((a) => <ActivityRow key={a.id} a={a} today={today} />)}
+      </Card>
     </ScrollView>
   );
 }
@@ -561,4 +685,8 @@ const styles = StyleSheet.create({
   hint: { marginBottom: space.md },
   gap: { height: space.sm },
   scanBlock: { marginBottom: space.md, gap: space.sm },
+  plan: { marginTop: space.sm },
+  actions: { flexDirection: 'row', gap: space.sm, marginTop: space.md },
+  action: { flex: 1, minHeight: 44, borderRadius: radius.md, alignItems: 'center', justifyContent: 'center' },
+  actionText: { fontSize: 14, fontWeight: '700' },
 });

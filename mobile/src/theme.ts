@@ -18,3 +18,13 @@ export const colors = {
 };
 export const radius = { md: 10, lg: 14 };
 export const space = { xs: 4, sm: 8, md: 12, lg: 16, xl: 24 };
+
+/** The POM POWER logo's own colors (sampled from backend/src/commercial/assets/pom-logo.png) — used on the
+ * Sales dashboard / home screens, which are styled after the brand mark rather than the app's general blue theme. */
+export const brand = {
+  blue: '#383f8c',
+  blueDark: '#2b3170',
+  blueSoft: '#eceefa',
+  red: '#e20612',
+  redSoft: '#fdeaec',
+};

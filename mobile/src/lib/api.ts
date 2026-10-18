@@ -172,3 +172,26 @@ export async function uploadFile<T>(path: string, file: { uri: string; name: str
   }
   return payload as T;
 }
+
+/**
+ * Posts plain text fields as multipart form data, no file — for an endpoint built around `FilesInterceptor` (files
+ * optional) where the server still expects a multipart body even with none attached (e.g. chat messages).
+ */
+export async function postMultipartFields<T>(path: string, fields: Record<string, string | undefined>, retry = true): Promise<T> {
+  const form = new FormData();
+  for (const [k, v] of Object.entries(fields)) if (v !== undefined) form.append(k, v);
+  let res: Response;
+  try {
+    res = await fetch(`${API_BASE}${path}`, { method: 'POST', headers: { 'X-Client': CLIENT, ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}) }, body: form });
+  } catch {
+    throw new ApiError(0, 'No internet connection, or the server could not be reached.');
+  }
+  if (res.status === 401 && retry && refreshToken && (await tryRefresh())) return postMultipartFields<T>(path, fields, false);
+  const contentType = res.headers.get('content-type') ?? '';
+  const payload: unknown = contentType.includes('application/json') ? await res.json() : await res.text();
+  if (!res.ok) {
+    const raw = typeof payload === 'object' && payload && 'message' in payload ? (payload as { message: unknown }).message : res.statusText;
+    throw new ApiError(res.status, Array.isArray(raw) ? raw.join('\n') : String(raw || 'Request failed'), payload);
+  }
+  return payload as T;
+}

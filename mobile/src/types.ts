@@ -323,6 +323,8 @@ export interface TicketSummary {
   createdAt: string;
   customer: CustomerRef;
   productTitle: string | null;
+  /** The customer's default address, "City, State" — null when none is on file. */
+  location: string | null;
   assignedEngineer: { id: string; name: string; phone: string | null } | null;
   warrantyRecord: WarrantyRef | null;
 }
