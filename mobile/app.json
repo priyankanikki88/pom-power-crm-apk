@@ -2,13 +2,13 @@
   "expo": {
     "name": "POM POWER CRM",
     "slug": "pom-power-crm",
-    "version": "1.6.7",
+    "version": "1.6.8",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
     "android": {
       "package": "com.pompower.crm",
-      "versionCode": 25,
+      "versionCode": 26,
       "adaptiveIcon": {
         "backgroundColor": "#0f172a",
         "foregroundImage": "./assets/android-icon-foreground.png",
