@@ -8,8 +8,10 @@ import type { MoreStackParams } from '../navigation';
 import { useOutbox } from '../lib/outbox';
 import { useUnreadNotifications } from './NotificationsScreen';
 import { colors, space } from '../theme';
+import appJson from '../../app.json';
 
-const APP_VERSION = '1.5.0';
+/** Was a hand-kept string that stopped being updated with every release — read from app.json instead, so it can't go stale again. */
+const APP_VERSION = appJson.expo.version;
 
 /** Profile and sign-out. Administration stays on the web CRM by design — this app is for sales and service work. */
 export function MoreScreen({ navigation }: NativeStackScreenProps<MoreStackParams, 'MoreHome'>) {
@@ -73,6 +75,21 @@ export function MoreScreen({ navigation }: NativeStackScreenProps<MoreStackParam
       {hasPermission('attendance.manage') ? (
         <View style={styles.link}>
           <Button title="Team Attendance" variant="secondary" onPress={() => navigation.navigate('AttendanceBoard')} />
+        </View>
+      ) : null}
+      {hasPermission('team.view') ? (
+        <View style={styles.link}>
+          <Button title="My Team" variant="secondary" onPress={() => navigation.navigate('TeamManagement')} />
+        </View>
+      ) : null}
+      {hasPermission('marketing.read') ? (
+        <View style={styles.link}>
+          <Button title="Marketing Campaigns" variant="secondary" onPress={() => navigation.navigate('Campaigns')} />
+        </View>
+      ) : null}
+      {hasPermission('marketing.manage') ? (
+        <View style={styles.link}>
+          <Button title="Emailer" variant="secondary" onPress={() => navigation.navigate('EmailCampaigns')} />
         </View>
       ) : null}
       <View style={styles.link}>

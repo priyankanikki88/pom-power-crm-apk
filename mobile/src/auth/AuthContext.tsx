@@ -10,12 +10,15 @@ export interface CurrentUser {
   id: string;
   fullName: string;
   email: string;
+  phone?: string | null;
+  employeeCode?: string | null;
   /** Signed in with a temporary password — must choose their own before using the CRM. */
   mustChangePassword: boolean;
   permissions: string[];
   branch?: { id: string; code: string; name: string } | null;
   department?: { id: string; code: string; name: string } | null;
   designation?: { id: string; code: string; name: string; level: number } | null;
+  reportingManager?: { id: string; fullName: string } | null;
   userRoles?: Array<{ role: { id: string; name: string } }>;
 }
 

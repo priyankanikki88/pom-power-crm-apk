@@ -41,6 +41,7 @@ export interface Lead {
   location: string | null;
   requirement: string | null;
   remark: string | null;
+  campaign: { id: string; name: string; channel: string } | null;
 }
 export interface LeadActivity {
   id: string;
@@ -412,6 +413,7 @@ export function LeadDetailScreen({ route, navigation }: NativeStackScreenProps<M
         <Row label="Phone" value={lead.phone} />
         <Row label="Deal value" value={formatINR(lead.value)} />
         <Row label="Location" value={lead.location} />
+        <Row label="Campaign" value={lead.campaign?.name} />
         <Row label="Next follow-up" value={lead.follow ? formatDate(lead.follow) : null} />
       </Card>
 
@@ -457,6 +459,7 @@ export function LeadFormScreen({ route, navigation }: NativeStackScreenProps<Mor
 }
 
 function LeadFormBody({ lead, onDone, canDelete, canTransfer }: { lead?: Lead; onDone: () => void; canDelete: boolean; canTransfer: boolean }) {
+  const { hasPermission } = useAuth();
   const [name, setName] = useState(lead?.name ?? '');
   const [company, setCompany] = useState(lead?.company ?? '');
   const [email, setEmail] = useState(lead?.email ?? '');
@@ -465,12 +468,20 @@ function LeadFormBody({ lead, onDone, canDelete, canTransfer }: { lead?: Lead; o
   const [stage, setStage] = useState<string | null>(lead?.stage ?? STAGES[0]!);
   const [value, setValue] = useState(String(lead?.value ?? ''));
   const [follow, setFollow] = useState<Date | null>(dayFromIso(lead?.follow));
+  const [campaignId, setCampaignId] = useState<string | null>(lead?.campaign?.id ?? null);
   const [error, setError] = useState<string | null>(null);
   const [transferring, setTransferring] = useState(false);
   const [toOwner, setToOwner] = useState<string | null>(null);
   const [reason, setReason] = useState('');
   const navigation = useNavigation<NavigationProp<MoreStackParams>>();
   const owners = useQuery({ queryKey: ['leads', 'owners'], queryFn: () => api.get<Person[]>('/leads/owners'), enabled: transferring });
+  const canSeeCampaigns = hasPermission('marketing.read');
+  const campaigns = useQuery({
+    queryKey: ['campaigns', 'options'],
+    queryFn: () => api.get<Array<{ id: string; name: string; channel: string }>>('/marketing-campaigns/options'),
+    enabled: canSeeCampaigns,
+  });
+  const campaignOptions = (campaigns.data ?? []).map((c) => ({ value: c.id, label: c.name }));
   const sourceOptions = options(lead && !SOURCES.includes(lead.source) ? [...SOURCES, lead.source] : SOURCES);
 
   function openCardScan() {
@@ -487,7 +498,7 @@ function LeadFormBody({ lead, onDone, canDelete, canTransfer }: { lead?: Lead; o
 
   const save = useMutation({
     mutationFn: () => {
-      const data = { name: name.trim(), company: company.trim(), email: email.trim(), phone: phone.trim(), source: source ?? undefined, stage: stage ?? undefined, value: Number(value.replace(/[^\d.]/g, '') || 0), follow: follow ? isoDay(follow) : '' };
+      const data = { name: name.trim(), company: company.trim(), email: email.trim(), phone: phone.trim(), source: source ?? undefined, stage: stage ?? undefined, value: Number(value.replace(/[^\d.]/g, '') || 0), follow: follow ? isoDay(follow) : '', ...(canSeeCampaigns ? { campaignId: campaignId ?? null } : {}) };
       return lead ? api.patch(`/leads/${lead.id}`, data) : api.post('/leads', data);
     },
     onSuccess: onDone,
@@ -521,6 +532,7 @@ function LeadFormBody({ lead, onDone, canDelete, canTransfer }: { lead?: Lead; o
         <Field label="Email" value={email} onChangeText={setEmail} keyboardType="email-address" autoCapitalize="none" maxLength={200} />
         <Field label="Phone" value={phone} onChangeText={setPhone} keyboardType="phone-pad" maxLength={40} />
         <ChipSelect label="Lead source" value={source} options={sourceOptions} onChange={(v) => v && setSource(v)} />
+        {canSeeCampaigns && campaignOptions.length > 0 ? <ChipSelect label="Marketing campaign" value={campaignId} options={campaignOptions} onChange={setCampaignId} allowClear /> : null}
         <ChipSelect label="Sales stage" value={stage} options={options(STAGES)} onChange={(v) => v && setStage(v)} />
         <Field label="Estimated deal value (₹)" value={value} onChangeText={setValue} keyboardType="numeric" />
         <DateField label="Next follow-up" value={follow} onChange={setFollow} allowClear />

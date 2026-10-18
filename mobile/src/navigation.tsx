@@ -50,6 +50,13 @@ import { ChatThreadScreen } from './screens/ChatThreadScreen';
 import { ReportsScreen, ReportViewerScreen } from './screens/ReportsScreen';
 import { SalesDashboardScreen } from './screens/SalesDashboardScreen';
 import { SalesHomeScreen } from './screens/SalesHomeScreen';
+import { TeamManagementScreen } from './screens/TeamManagementScreen';
+import { CampaignDetailScreen, CampaignFormScreen, CampaignsScreen } from './screens/CampaignScreens';
+import { EmailCampaignDetailScreen, EmailCampaignFormScreen, EmailCampaignsScreen } from './screens/EmailCampaignScreens';
+import { ServiceEngineerHomeScreen } from './screens/ServiceEngineerHomeScreen';
+import { ServiceEngineerDashboardScreen } from './screens/ServiceEngineerDashboardScreen';
+import { ServiceEngineerProfileScreen } from './screens/ServiceEngineerProfileScreen';
+import { SparePartsFormScreen, SparePartsScreen } from './screens/SparePartsScreen';
 import { brand, colors } from './theme';
 
 export type CustomersStackParams = {
@@ -97,6 +104,21 @@ export type MoreStackParams = {
   Leave: undefined;
   LeaveForm: undefined;
   AttendanceBoard: undefined;
+  TeamManagement: undefined;
+  Campaigns: undefined;
+  CampaignDetail: { id: string; name: string };
+  /** No id = add a campaign. */
+  CampaignForm: { id?: string } | undefined;
+  EmailCampaigns: undefined;
+  EmailCampaignDetail: { id: string; subject: string };
+  EmailCampaignForm: undefined;
+  Reports: undefined;
+  ReportViewer: { id: string; title: string };
+  ServiceEngineerHome: undefined;
+  ServiceEngineerDashboard: undefined;
+  ServiceEngineerProfile: undefined;
+  SpareParts: undefined;
+  SparePartsForm: undefined;
   Meetings: undefined;
   MeetingForm: undefined;
   MeetingDetail: { id: string; title: string };
@@ -138,7 +160,7 @@ export type SalesStackParams = {
   ChatThread: { id: string; name: string };
 } & Pick<CustomersStackParams, 'CustomerList' | 'CustomerDetail' | 'CustomerForm'> &
   Pick<QuotationsStackParams, 'QuotationList' | 'QuotationDetail' | 'QuotationForm' | 'DocDetail' | 'BillDetail'> &
-  Pick<MoreStackParams, 'Expenses' | 'ExpenseDetail' | 'ExpenseForm' | 'Targets' | 'Tours' | 'TourDetail' | 'TourForm' | 'Leads' | 'LeadDetail' | 'LeadForm' | 'CardScan' | 'LeadActivityForm' | 'Attendance' | 'Notifications'>;
+  Pick<MoreStackParams, 'Expenses' | 'ExpenseDetail' | 'ExpenseForm' | 'Targets' | 'Tours' | 'TourDetail' | 'TourForm' | 'Leads' | 'LeadDetail' | 'LeadForm' | 'CardScan' | 'LeadActivityForm' | 'Attendance' | 'Notifications' | 'TeamManagement' | 'Campaigns' | 'CampaignDetail' | 'CampaignForm' | 'EmailCampaigns' | 'EmailCampaignDetail' | 'EmailCampaignForm'>;
 export type ProductsStackParams = { ProductList: undefined; ProductDetail: { id: string } };
 
 const Tabs = createBottomTabNavigator();
@@ -149,6 +171,8 @@ const ServiceStack = createNativeStackNavigator<ServiceStackParams>();
 const MoreStack = createNativeStackNavigator<MoreStackParams>();
 const SalesStack = createNativeStackNavigator<SalesStackParams>();
 const ProductsStack = createNativeStackNavigator<ProductsStackParams>();
+const ServiceEngineerHomeStack = createNativeStackNavigator<MoreStackParams>();
+const ServiceEngineerReportsStack = createNativeStackNavigator<MoreStackParams>();
 
 const header = { headerStyle: { backgroundColor: colors.navy }, headerTintColor: '#ffffff', headerTitleStyle: { fontWeight: '700' as const } };
 
@@ -229,6 +253,13 @@ function MoreNavigator() {
       <MoreStack.Screen name="Leave" component={LeaveScreen} options={{ title: 'Leave' }} />
       <MoreStack.Screen name="LeaveForm" component={LeaveFormScreen} options={{ title: 'Apply for Leave' }} />
       <MoreStack.Screen name="AttendanceBoard" component={AttendanceBoardScreen} options={{ title: 'Team Attendance' }} />
+      <MoreStack.Screen name="TeamManagement" component={TeamManagementScreen} options={{ title: 'My Team' }} />
+      <MoreStack.Screen name="Campaigns" component={CampaignsScreen} options={{ title: 'Marketing Campaigns' }} />
+      <MoreStack.Screen name="CampaignDetail" component={CampaignDetailScreen} options={({ route }) => ({ title: route.params.name })} />
+      <MoreStack.Screen name="CampaignForm" component={CampaignFormScreen} options={({ route }) => ({ title: route.params?.id ? 'Edit Campaign' : 'New Campaign' })} />
+      <MoreStack.Screen name="EmailCampaigns" component={EmailCampaignsScreen} options={{ title: 'Emailer' }} />
+      <MoreStack.Screen name="EmailCampaignDetail" component={EmailCampaignDetailScreen} options={({ route }) => ({ title: route.params.subject })} />
+      <MoreStack.Screen name="EmailCampaignForm" component={EmailCampaignFormScreen} options={{ title: 'New Email' }} />
       <MoreStack.Screen name="MeetingForm" component={MeetingFormScreen} options={{ title: 'New Meeting' }} />
       <MoreStack.Screen name="Meetings" component={MeetingsScreen} options={{ title: 'Meetings' }} />
       <MoreStack.Screen name="MeetingDetail" component={MeetingDetailScreen} options={({ route }) => ({ title: route.params.title })} />
@@ -280,6 +311,13 @@ function SalesNavigator() {
       <SalesStack.Screen name="CardScan" component={CardScanScreen} options={{ title: 'Scan Visiting Card', headerShown: false }} />
       <SalesStack.Screen name="LeadActivityForm" component={LeadActivityFormScreen} options={({ route }) => ({ title: route.params?.id ? 'Edit Activity' : 'Schedule Follow-up / Event' })} />
       <SalesStack.Screen name="Attendance" component={AttendanceScreen} options={{ title: 'Attendance' }} />
+      <SalesStack.Screen name="TeamManagement" component={TeamManagementScreen} options={{ title: 'My Team' }} />
+      <SalesStack.Screen name="Campaigns" component={CampaignsScreen} options={{ title: 'Marketing Campaigns' }} />
+      <SalesStack.Screen name="CampaignDetail" component={CampaignDetailScreen} options={({ route }) => ({ title: route.params.name })} />
+      <SalesStack.Screen name="CampaignForm" component={CampaignFormScreen} options={({ route }) => ({ title: route.params?.id ? 'Edit Campaign' : 'New Campaign' })} />
+      <SalesStack.Screen name="EmailCampaigns" component={EmailCampaignsScreen} options={{ title: 'Emailer' }} />
+      <SalesStack.Screen name="EmailCampaignDetail" component={EmailCampaignDetailScreen} options={({ route }) => ({ title: route.params.subject })} />
+      <SalesStack.Screen name="EmailCampaignForm" component={EmailCampaignFormScreen} options={{ title: 'New Email' }} />
       <SalesStack.Screen name="Notifications" component={NotificationsScreen} options={{ title: 'Notifications' }} />
       <SalesStack.Screen name="Reports" component={ReportsScreen} options={{ title: 'Reports' }} />
       <SalesStack.Screen name="ReportViewer" component={ReportViewerScreen} options={({ route }) => ({ title: route.params.title })} />
@@ -385,6 +423,55 @@ function SalesAppTabs() {
   );
 }
 
+function ServiceEngineerHomeNavigator() {
+  return (
+    <ServiceEngineerHomeStack.Navigator screenOptions={header}>
+      <ServiceEngineerHomeStack.Screen name="ServiceEngineerHome" component={ServiceEngineerHomeScreen} options={{ title: 'Home' }} />
+      <ServiceEngineerHomeStack.Screen name="SpareParts" component={SparePartsScreen} options={{ title: 'Spare Parts & Replacement' }} />
+      <ServiceEngineerHomeStack.Screen name="SparePartsForm" component={SparePartsFormScreen} options={{ title: 'Request Parts' }} />
+    </ServiceEngineerHomeStack.Navigator>
+  );
+}
+
+function ServiceEngineerReportsNavigator() {
+  return (
+    <ServiceEngineerReportsStack.Navigator screenOptions={header}>
+      <ServiceEngineerReportsStack.Screen name="Reports" component={ReportsScreen} options={{ title: 'Reports' }} />
+      <ServiceEngineerReportsStack.Screen name="ReportViewer" component={ReportViewerScreen} options={({ route }) => ({ title: route.params.title })} />
+    </ServiceEngineerReportsStack.Navigator>
+  );
+}
+
+/**
+ * A Service Engineer's own 6-tab layout (Home / Jobs / Dashboard / Reports / Profile / More), matching the pasted
+ * mockup's own footer choice — the Jobs tab reuses ServiceNavigator exactly as it already works (ServiceHomeRouter
+ * already resolves to MyServiceJobsScreen for a non-coordinator), and More reuses MoreNavigator, same as every other
+ * role. Only Home, Dashboard, Profile and Spare Parts are new. A coordinator (the "Service" role) keeps AppTabs —
+ * this shell is for the field engineer's own login only.
+ */
+function ServiceEngineerAppTabs() {
+  const insets = useSafeAreaInsets();
+  usePushNavigation('More');
+  return (
+    <Tabs.Navigator
+      screenOptions={{
+        headerShown: false,
+        tabBarActiveTintColor: brand.blue,
+        tabBarInactiveTintColor: colors.muted,
+        tabBarLabelStyle: styles.tabLabel,
+        tabBarStyle: { height: 56 + insets.bottom, paddingBottom: insets.bottom + 6, paddingTop: 6 },
+      }}
+    >
+      <Tabs.Screen name="ServiceEngineerHomeTab" component={ServiceEngineerHomeNavigator} options={{ title: 'Home', tabBarLabel: 'Home', tabBarIcon: tabIcon('⌂') }} />
+      <Tabs.Screen name="Jobs" component={ServiceNavigator} options={{ title: 'Jobs', tabBarLabel: 'Jobs', tabBarIcon: tabIcon('▤') }} />
+      <Tabs.Screen name="ServiceEngineerDashboardTab" component={ServiceEngineerDashboardScreen} options={{ title: 'Dashboard', tabBarLabel: 'Dashboard', tabBarIcon: tabIcon('◎') }} />
+      <Tabs.Screen name="ServiceEngineerReportsTab" component={ServiceEngineerReportsNavigator} options={{ title: 'Reports', tabBarLabel: 'Reports', tabBarIcon: tabIcon('▣') }} />
+      <Tabs.Screen name="ServiceEngineerProfileTab" component={ServiceEngineerProfileScreen} options={{ title: 'Profile', tabBarLabel: 'Profile', tabBarIcon: tabIcon('◉') }} />
+      <Tabs.Screen name="More" component={MoreNavigator} options={{ headerShown: false, tabBarIcon: tabIcon('⋯') }} />
+    </Tabs.Navigator>
+  );
+}
+
 /** Which part of the app the user sees: a splash while the stored session is checked, sign-in, the forced password change, or the app. */
 export function RootNavigator() {
   const { user, loading } = useAuth();
@@ -398,7 +485,8 @@ export function RootNavigator() {
   if (!user) return <LoginScreen />;
   if (user.mustChangePassword) return <ChangePasswordScreen />;
   const isSales = user.userRoles?.some((r) => r.role.name === 'Sales') ?? false;
-  return <NavigationContainer>{isSales ? <SalesAppTabs /> : <AppTabs />}</NavigationContainer>;
+  const isServiceEngineer = !isSales && (user.userRoles?.some((r) => r.role.name === 'Service Engineer') ?? false);
+  return <NavigationContainer>{isSales ? <SalesAppTabs /> : isServiceEngineer ? <ServiceEngineerAppTabs /> : <AppTabs />}</NavigationContainer>;
 }
 
 const styles = StyleSheet.create({

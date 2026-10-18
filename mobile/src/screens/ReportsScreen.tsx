@@ -43,6 +43,8 @@ const GROUP_LABEL: Record<string, string> = {
   ATTENDANCE: 'Attendance',
   EXPENSE: 'Expenses',
   TOUR: 'Tour Plans',
+  LEAD: 'Leads',
+  MARKETING: 'Marketing',
 };
 
 /** Every report the signed-in user has permission for (server-filtered) — same catalogue the web CRM's Reports page lists. */

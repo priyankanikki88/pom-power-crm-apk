@@ -1,5 +1,6 @@
 import { useNavigation, type NavigationProp } from '@react-navigation/native';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useAuth } from '../auth/AuthContext';
 import { SalesTopBar } from '../components/SalesTopBar';
 import { colors, radius, space } from '../theme';
 import { OutboxBanner } from './OutboxScreen';
@@ -28,9 +29,23 @@ const TILES: Tile[] = [
   { key: 'complaint', label: 'Complaint', icon: '!', bg: '#fdeded', fg: '#d92d20', onPress: (n) => n.navigate('Service', { screen: 'TicketForm' }) },
 ];
 
+/** Shown only for a Sales Head / manager (team.view) — everyone else keeps the plain 12-tile grid above. */
+const TEAM_TILE: Tile = { key: 'team', label: 'My Team', icon: '◈', bg: '#eceefa', fg: '#383f8c', onPress: (n) => n.navigate('TeamManagement') };
+/** Shown only for those with marketing.read — a plain Sales person without it keeps the grid above unchanged. */
+const CAMPAIGN_TILE: Tile = { key: 'campaigns', label: 'Campaigns', icon: '◎', bg: '#eaf0fe', fg: '#2f5fe0', onPress: (n) => n.navigate('Campaigns') };
+/** Shown only for those with marketing.manage — composing and sending bulk email is a manage action. */
+const EMAILER_TILE: Tile = { key: 'emailer', label: 'Emailer', icon: '✉', bg: '#fbe9f6', fg: '#b4308f', onPress: (n) => n.navigate('EmailCampaigns') };
+
 /** The Sales Person's Home / landing screen — one tap to every sales & service action, plus a way into the Sales Dashboard. */
 export function SalesHomeScreen() {
   const navigation = useNavigation<NavigationProp<Record<string, object | undefined>>>();
+  const { hasPermission } = useAuth();
+  const tiles = [
+    ...TILES,
+    ...(hasPermission('marketing.read') ? [CAMPAIGN_TILE] : []),
+    ...(hasPermission('marketing.manage') ? [EMAILER_TILE] : []),
+    ...(hasPermission('team.view') ? [TEAM_TILE] : []),
+  ];
 
   return (
     <View style={styles.screen}>
@@ -46,7 +61,7 @@ export function SalesHomeScreen() {
         </Pressable>
 
         <View style={styles.grid}>
-          {TILES.map((t) => (
+          {tiles.map((t) => (
             <Pressable key={t.key} style={styles.tile} onPress={() => t.onPress(navigation)} accessibilityRole="button" accessibilityLabel={t.label}>
               <View style={[styles.tileIcon, { backgroundColor: t.bg }]}>
                 <Text style={[styles.tileGlyph, { color: t.fg }]}>{t.icon}</Text>
