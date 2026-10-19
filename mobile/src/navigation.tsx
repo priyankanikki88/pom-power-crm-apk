@@ -57,6 +57,22 @@ import { ServiceEngineerHomeScreen } from './screens/ServiceEngineerHomeScreen';
 import { ServiceEngineerDashboardScreen } from './screens/ServiceEngineerDashboardScreen';
 import { ServiceEngineerProfileScreen } from './screens/ServiceEngineerProfileScreen';
 import { SparePartsFormScreen, SparePartsScreen } from './screens/SparePartsScreen';
+import { MdHomeScreen } from './screens/MdHomeScreen';
+import { MdReportsMenuScreen } from './screens/MdReportsMenuScreen';
+import { MdSalesReportScreen } from './screens/MdSalesReportScreen';
+import { MdTopEmployeesScreen } from './screens/MdTopEmployeesScreen';
+import { MdTargetAchievementScreen } from './screens/MdTargetAchievementScreen';
+import { MdPipelineScreen } from './screens/MdPipelineScreen';
+import { MdExpenseSummaryScreen } from './screens/MdExpenseSummaryScreen';
+import { MdAttendanceOverviewScreen } from './screens/MdAttendanceOverviewScreen';
+import { MdServiceSummaryScreen } from './screens/MdServiceSummaryScreen';
+import { MdApprovalCenterScreen } from './screens/MdApprovalCenterScreen';
+import { ServiceHeadHomeScreen } from './screens/ServiceHeadHomeScreen';
+import { ServiceHeadVisitsScreen } from './screens/ServiceHeadVisitsScreen';
+import { ServiceHeadTechTeamScreen } from './screens/ServiceHeadTechTeamScreen';
+import { ServiceHeadReportsMenuScreen } from './screens/ServiceHeadReportsMenuScreen';
+import { ServiceHeadSlaScreen } from './screens/ServiceHeadSlaScreen';
+import { ServiceHeadApprovalsScreen } from './screens/ServiceHeadApprovalsScreen';
 import { brand, colors } from './theme';
 
 export type CustomersStackParams = {
@@ -163,6 +179,34 @@ export type SalesStackParams = {
   Pick<MoreStackParams, 'Expenses' | 'ExpenseDetail' | 'ExpenseForm' | 'Targets' | 'Tours' | 'TourDetail' | 'TourForm' | 'Leads' | 'LeadDetail' | 'LeadForm' | 'CardScan' | 'LeadActivityForm' | 'Attendance' | 'Notifications' | 'TeamManagement' | 'Campaigns' | 'CampaignDetail' | 'CampaignForm' | 'EmailCampaigns' | 'EmailCampaignDetail' | 'EmailCampaignForm'>;
 export type ProductsStackParams = { ProductList: undefined; ProductDetail: { id: string } };
 
+/** The MD / CEO role's own screens — Home, the Sales Report family, Top Employees, Target Achievement, Sales Pipeline,
+ * and the Expense / Attendance / Service / Approval tabs. Reports is its own small stack (a menu, then one of four
+ * screens); every other tab here is a single screen with its own native header. */
+export type MdStackParams = {
+  MdHome: undefined;
+  MdReportsMenu: undefined;
+  MdSalesReport: undefined;
+  MdTopEmployees: undefined;
+  MdTargetAchievement: undefined;
+  MdPipeline: undefined;
+  MdExpenseSummary: undefined;
+  MdAttendanceOverview: undefined;
+  MdServiceSummary: undefined;
+  MdApprovalCenter: undefined;
+};
+
+/** The Service Head role's own screens — Home, Visits, Tech Team, Reports (SLA & Performance, Approval Center, and the
+ * generic Reports catalogue). Tickets reuses ServiceNavigator wholesale (a Service Head is a coordinator, same scope
+ * as the "Service" role, via service.all_records); More reuses MoreNavigator, same as every other role. */
+export type ServiceHeadStackParams = {
+  ServiceHeadHome: undefined;
+  ServiceHeadVisits: undefined;
+  ServiceHeadTechTeam: undefined;
+  ServiceHeadReportsMenu: undefined;
+  ServiceHeadSla: undefined;
+  ServiceHeadApprovals: undefined;
+} & Pick<MoreStackParams, 'Reports' | 'ReportViewer'>;
+
 const Tabs = createBottomTabNavigator();
 const CustomersStack = createNativeStackNavigator<CustomersStackParams>();
 const FollowUpsStack = createNativeStackNavigator<FollowUpsStackParams>();
@@ -173,6 +217,16 @@ const SalesStack = createNativeStackNavigator<SalesStackParams>();
 const ProductsStack = createNativeStackNavigator<ProductsStackParams>();
 const ServiceEngineerHomeStack = createNativeStackNavigator<MoreStackParams>();
 const ServiceEngineerReportsStack = createNativeStackNavigator<MoreStackParams>();
+const MdHomeStack = createNativeStackNavigator<MdStackParams>();
+const MdReportsStack = createNativeStackNavigator<MdStackParams>();
+const MdExpenseStack = createNativeStackNavigator<MdStackParams>();
+const MdAttendanceStack = createNativeStackNavigator<MdStackParams>();
+const MdServiceStack = createNativeStackNavigator<MdStackParams>();
+const MdApprovalStack = createNativeStackNavigator<MdStackParams>();
+const ServiceHeadHomeStack = createNativeStackNavigator<ServiceHeadStackParams>();
+const ServiceHeadVisitsStack = createNativeStackNavigator<ServiceHeadStackParams>();
+const ServiceHeadTechTeamStack = createNativeStackNavigator<ServiceHeadStackParams>();
+const ServiceHeadReportsStack = createNativeStackNavigator<ServiceHeadStackParams>();
 
 const header = { headerStyle: { backgroundColor: colors.navy }, headerTintColor: '#ffffff', headerTitleStyle: { fontWeight: '700' as const } };
 
@@ -442,6 +496,152 @@ function ServiceEngineerReportsNavigator() {
   );
 }
 
+function MdHomeNavigator() {
+  return (
+    <MdHomeStack.Navigator screenOptions={header}>
+      <MdHomeStack.Screen name="MdHome" component={MdHomeScreen} options={{ title: 'Home' }} />
+    </MdHomeStack.Navigator>
+  );
+}
+
+function MdReportsNavigator() {
+  return (
+    <MdReportsStack.Navigator screenOptions={header}>
+      <MdReportsStack.Screen name="MdReportsMenu" component={MdReportsMenuScreen} options={{ title: 'Sales Reports' }} />
+      <MdReportsStack.Screen name="MdSalesReport" component={MdSalesReportScreen} options={{ title: 'Sales Report' }} />
+      <MdReportsStack.Screen name="MdTopEmployees" component={MdTopEmployeesScreen} options={{ title: 'Top 5 Employees' }} />
+      <MdReportsStack.Screen name="MdTargetAchievement" component={MdTargetAchievementScreen} options={{ title: 'Target Achievement' }} />
+      <MdReportsStack.Screen name="MdPipeline" component={MdPipelineScreen} options={{ title: 'Sales Pipeline' }} />
+    </MdReportsStack.Navigator>
+  );
+}
+
+function MdExpenseNavigator() {
+  return (
+    <MdExpenseStack.Navigator screenOptions={header}>
+      <MdExpenseStack.Screen name="MdExpenseSummary" component={MdExpenseSummaryScreen} options={{ title: 'Expense Summary' }} />
+    </MdExpenseStack.Navigator>
+  );
+}
+
+function MdAttendanceNavigator() {
+  return (
+    <MdAttendanceStack.Navigator screenOptions={header}>
+      <MdAttendanceStack.Screen name="MdAttendanceOverview" component={MdAttendanceOverviewScreen} options={{ title: 'Attendance Overview' }} />
+    </MdAttendanceStack.Navigator>
+  );
+}
+
+function MdServiceNavigator() {
+  return (
+    <MdServiceStack.Navigator screenOptions={header}>
+      <MdServiceStack.Screen name="MdServiceSummary" component={MdServiceSummaryScreen} options={{ title: 'Service Summary' }} />
+    </MdServiceStack.Navigator>
+  );
+}
+
+function MdApprovalNavigator() {
+  return (
+    <MdApprovalStack.Navigator screenOptions={header}>
+      <MdApprovalStack.Screen name="MdApprovalCenter" component={MdApprovalCenterScreen} options={{ title: 'Approval Center' }} />
+    </MdApprovalStack.Navigator>
+  );
+}
+
+/**
+ * The MD / CEO role's own 7-tab layout (Home / Reports / Expense / Attendance / Service / Approval / Others) — a
+ * company-wide, read-only view (no document creation here): every figure comes from MdReportsController, each
+ * independently permission-gated the same as any other report. Others reuses MoreNavigator wholesale, same as every
+ * other role's "More" tab.
+ */
+function MdCeoAppTabs() {
+  const insets = useSafeAreaInsets();
+  usePushNavigation('More');
+  return (
+    <Tabs.Navigator
+      screenOptions={{
+        headerShown: false,
+        tabBarActiveTintColor: brand.blue,
+        tabBarInactiveTintColor: colors.muted,
+        tabBarLabelStyle: styles.tabLabel,
+        tabBarStyle: { height: 56 + insets.bottom, paddingBottom: insets.bottom + 6, paddingTop: 6 },
+      }}
+    >
+      <Tabs.Screen name="MdHomeTab" component={MdHomeNavigator} options={{ title: 'Home', tabBarLabel: 'Home', tabBarIcon: tabIcon('⌂') }} />
+      <Tabs.Screen name="MdReportsTab" component={MdReportsNavigator} options={{ title: 'Reports', tabBarLabel: 'Reports', tabBarIcon: tabIcon('▣') }} />
+      <Tabs.Screen name="MdExpenseTab" component={MdExpenseNavigator} options={{ title: 'Expense', tabBarLabel: 'Expense', tabBarIcon: tabIcon('₹') }} />
+      <Tabs.Screen name="MdAttendanceTab" component={MdAttendanceNavigator} options={{ title: 'Attendance', tabBarLabel: 'Attendance', tabBarIcon: tabIcon('✓') }} />
+      <Tabs.Screen name="MdServiceTab" component={MdServiceNavigator} options={{ title: 'Service', tabBarLabel: 'Service', tabBarIcon: tabIcon('⚙') }} />
+      <Tabs.Screen name="Approval" component={MdApprovalNavigator} options={{ title: 'Approval', tabBarLabel: 'Approval', tabBarIcon: tabIcon('✔') }} />
+      <Tabs.Screen name="More" component={MoreNavigator} options={{ headerShown: false, tabBarIcon: tabIcon('⋯') }} />
+    </Tabs.Navigator>
+  );
+}
+
+function ServiceHeadHomeNavigator() {
+  return (
+    <ServiceHeadHomeStack.Navigator screenOptions={header}>
+      <ServiceHeadHomeStack.Screen name="ServiceHeadHome" component={ServiceHeadHomeScreen} options={{ title: 'Home' }} />
+    </ServiceHeadHomeStack.Navigator>
+  );
+}
+
+function ServiceHeadVisitsNavigator() {
+  return (
+    <ServiceHeadVisitsStack.Navigator screenOptions={header}>
+      <ServiceHeadVisitsStack.Screen name="ServiceHeadVisits" component={ServiceHeadVisitsScreen} options={{ title: 'Visits' }} />
+    </ServiceHeadVisitsStack.Navigator>
+  );
+}
+
+function ServiceHeadTechTeamNavigator() {
+  return (
+    <ServiceHeadTechTeamStack.Navigator screenOptions={header}>
+      <ServiceHeadTechTeamStack.Screen name="ServiceHeadTechTeam" component={ServiceHeadTechTeamScreen} options={{ title: 'Tech Team' }} />
+    </ServiceHeadTechTeamStack.Navigator>
+  );
+}
+
+function ServiceHeadReportsNavigator() {
+  return (
+    <ServiceHeadReportsStack.Navigator screenOptions={header}>
+      <ServiceHeadReportsStack.Screen name="ServiceHeadReportsMenu" component={ServiceHeadReportsMenuScreen} options={{ title: 'Reports' }} />
+      <ServiceHeadReportsStack.Screen name="ServiceHeadSla" component={ServiceHeadSlaScreen} options={{ title: 'SLA & Performance' }} />
+      <ServiceHeadReportsStack.Screen name="ServiceHeadApprovals" component={ServiceHeadApprovalsScreen} options={{ title: 'Approval Center' }} />
+      <ServiceHeadReportsStack.Screen name="Reports" component={ReportsScreen} options={{ title: 'All Reports' }} />
+      <ServiceHeadReportsStack.Screen name="ReportViewer" component={ReportViewerScreen} options={({ route }) => ({ title: route.params.title })} />
+    </ServiceHeadReportsStack.Navigator>
+  );
+}
+
+/**
+ * The Service Head role's own 6-tab layout (Home / Tickets / Visits / Tech Team / Reports / More). Tickets reuses
+ * ServiceNavigator wholesale — a Service Head holds service.all_records, the same coordinator scope as the "Service"
+ * role, so ServiceHomeRouter already resolves to the full ticket list, not the field-engineer job list.
+ */
+function ServiceHeadAppTabs() {
+  const insets = useSafeAreaInsets();
+  usePushNavigation('More');
+  return (
+    <Tabs.Navigator
+      screenOptions={{
+        headerShown: false,
+        tabBarActiveTintColor: brand.blue,
+        tabBarInactiveTintColor: colors.muted,
+        tabBarLabelStyle: styles.tabLabel,
+        tabBarStyle: { height: 56 + insets.bottom, paddingBottom: insets.bottom + 6, paddingTop: 6 },
+      }}
+    >
+      <Tabs.Screen name="ServiceHeadHomeTab" component={ServiceHeadHomeNavigator} options={{ title: 'Home', tabBarLabel: 'Home', tabBarIcon: tabIcon('⌂') }} />
+      <Tabs.Screen name="Tickets" component={ServiceNavigator} options={{ title: 'Tickets', tabBarLabel: 'Tickets', tabBarIcon: tabIcon('▤') }} />
+      <Tabs.Screen name="ServiceHeadVisitsTab" component={ServiceHeadVisitsNavigator} options={{ title: 'Visits', tabBarLabel: 'Visits', tabBarIcon: tabIcon('📅') }} />
+      <Tabs.Screen name="ServiceHeadTechTeamTab" component={ServiceHeadTechTeamNavigator} options={{ title: 'Tech Team', tabBarLabel: 'Tech Team', tabBarIcon: tabIcon('👤') }} />
+      <Tabs.Screen name="ServiceHeadReportsTab" component={ServiceHeadReportsNavigator} options={{ title: 'Reports', tabBarLabel: 'Reports', tabBarIcon: tabIcon('▣') }} />
+      <Tabs.Screen name="More" component={MoreNavigator} options={{ headerShown: false, tabBarIcon: tabIcon('⋯') }} />
+    </Tabs.Navigator>
+  );
+}
+
 /**
  * A Service Engineer's own 6-tab layout (Home / Jobs / Dashboard / Reports / Profile / More), matching the pasted
  * mockup's own footer choice — the Jobs tab reuses ServiceNavigator exactly as it already works (ServiceHomeRouter
@@ -486,7 +686,13 @@ export function RootNavigator() {
   if (user.mustChangePassword) return <ChangePasswordScreen />;
   const isSales = user.userRoles?.some((r) => r.role.name === 'Sales') ?? false;
   const isServiceEngineer = !isSales && (user.userRoles?.some((r) => r.role.name === 'Service Engineer') ?? false);
-  return <NavigationContainer>{isSales ? <SalesAppTabs /> : isServiceEngineer ? <ServiceEngineerAppTabs /> : <AppTabs />}</NavigationContainer>;
+  const isMdCeo = !isSales && !isServiceEngineer && (user.userRoles?.some((r) => r.role.name === 'MD / CEO') ?? false);
+  const isServiceHead = !isSales && !isServiceEngineer && !isMdCeo && (user.userRoles?.some((r) => r.role.name === 'Service Head') ?? false);
+  return (
+    <NavigationContainer>
+      {isSales ? <SalesAppTabs /> : isServiceEngineer ? <ServiceEngineerAppTabs /> : isMdCeo ? <MdCeoAppTabs /> : isServiceHead ? <ServiceHeadAppTabs /> : <AppTabs />}
+    </NavigationContainer>
+  );
 }
 
 const styles = StyleSheet.create({

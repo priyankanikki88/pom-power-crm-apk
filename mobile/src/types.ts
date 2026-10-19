@@ -327,6 +327,8 @@ export interface TicketSummary {
   location: string | null;
   assignedEngineer: { id: string; name: string; phone: string | null } | null;
   warrantyRecord: WarrantyRef | null;
+  /** When the engineer is expected on site — null when not yet scheduled. */
+  scheduledAt: string | null;
 }
 
 export interface Revisit {
