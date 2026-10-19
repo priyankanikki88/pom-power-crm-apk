@@ -1,6 +1,6 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
-import { ActivityIndicator, Alert, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Alert, Linking, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { ChipSelect } from '../components/inputs';
 import { Button, Card, ErrorBox, Field, Row, text } from '../components/ui';
 import { api, ApiError } from '../lib/api';
@@ -13,7 +13,7 @@ interface Today {
   date: string;
   workingDay: boolean;
   holiday: { name: string } | null;
-  record: { status: string; punchInAt: string | null; punchOutAt: string | null; punchInLat?: string | null } | null;
+  record: { status: string; punchInAt: string | null; punchOutAt: string | null; punchInLat?: string | null; punchInLng?: string | null } | null;
   status: string;
   canMark: boolean;
   cutoff: string;
@@ -141,7 +141,13 @@ export function AttendanceScreen() {
           <Text style={[styles.big, { color: TONE[t.status] ?? colors.text }]}>{label(t.status)}</Text>
           {t.holiday ? <Text style={text.muted}>{t.holiday.name}</Text> : null}
           {t.record?.punchInAt ? <Row label="Marked at" value={time(t.record.punchInAt)} /> : null}
-          {t.record?.punchInAt ? <Row label="Location" value={t.record.punchInLat ? 'Saved' : 'Not recorded'} /> : null}
+          {t.record?.punchInAt && t.record.punchInLat && t.record.punchInLng ? (
+            <Pressable onPress={() => void Linking.openURL(`https://www.google.com/maps/search/?api=1&query=${t.record!.punchInLat},${t.record!.punchInLng}`)} accessibilityRole="button" accessibilityLabel="View your punch-in location on the map">
+              <Row label="Location" value="Saved · View on map" />
+            </Pressable>
+          ) : t.record?.punchInAt ? (
+            <Row label="Location" value="Not recorded" />
+          ) : null}
           {t.record?.punchOutAt ? <Row label="Punched out" value={time(t.record.punchOutAt)} /> : null}
 
           {t.canMark ? (

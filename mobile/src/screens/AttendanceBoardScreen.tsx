@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
-import { ActivityIndicator, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Linking, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { ChipSelect, DateField } from '../components/inputs';
 import { Button, ErrorBox, Field, text } from '../components/ui';
 import { api, ApiError } from '../lib/api';
@@ -11,7 +11,7 @@ import { colors, radius, space } from '../theme';
 interface BoardRow {
   user: { id: string; fullName: string; branch: string | null };
   status: string;
-  record: { status: string; punchInAt: string | null; remarks: string | null } | null;
+  record: { status: string; punchInAt: string | null; remarks: string | null; punchInLat?: string | null; punchInLng?: string | null } | null;
   holiday: string | null;
 }
 interface Board {
@@ -89,6 +89,16 @@ export function AttendanceBoardScreen() {
             </View>
             <Text style={[styles.status, { color: TONE[row.status] ?? colors.muted }]}>{label(row.status)}</Text>
           </Pressable>
+          {row.record?.punchInLat && row.record?.punchInLng ? (
+            <Pressable
+              style={styles.mapLink}
+              onPress={() => void Linking.openURL(`https://www.google.com/maps/search/?api=1&query=${row.record!.punchInLat},${row.record!.punchInLng}`)}
+              accessibilityRole="button"
+              accessibilityLabel={`View ${row.user.fullName}'s punch-in location on the map`}
+            >
+              <Text style={styles.mapLinkText}>📍 View punch-in location on map</Text>
+            </Pressable>
+          ) : null}
           {editing === row.user.id ? (
             <View style={styles.form}>
               {error ? <ErrorBox message={error} /> : null}
@@ -112,5 +122,7 @@ const styles = StyleSheet.create({
   row: { flexDirection: 'row', alignItems: 'center', gap: space.sm },
   name: { fontSize: 15, fontWeight: '700', color: colors.text },
   status: { fontSize: 12.5, fontWeight: '700' },
+  mapLink: { marginTop: space.sm },
+  mapLinkText: { fontSize: 12.5, fontWeight: '600', color: colors.primaryDark },
   form: { marginTop: space.md },
 });

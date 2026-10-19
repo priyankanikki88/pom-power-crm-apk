@@ -38,7 +38,10 @@ const errorText = (err: unknown, fallback: string) => (err instanceof ApiError ?
 const GROUP_LABEL: Record<string, string> = {
   SALES: 'Sales',
   SERVICE: 'Service',
+  STOCK: 'Stock',
   DISPATCH: 'Stock & Dispatch',
+  PAYMENT: 'Payment',
+  CUSTOMER: 'Customer',
   TARGET: 'Targets',
   ATTENDANCE: 'Attendance',
   EXPENSE: 'Expenses',

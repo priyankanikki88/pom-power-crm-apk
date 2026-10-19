@@ -246,6 +246,8 @@ const SalesStack = createNativeStackNavigator<SalesStackParams>();
 const ProductsStack = createNativeStackNavigator<ProductsStackParams>();
 const ServiceEngineerHomeStack = createNativeStackNavigator<MoreStackParams>();
 const ServiceEngineerReportsStack = createNativeStackNavigator<MoreStackParams>();
+const ServiceEngineerDashboardStack = createNativeStackNavigator<MoreStackParams>();
+const ServiceEngineerProfileStack = createNativeStackNavigator<MoreStackParams>();
 const MdHomeStack = createNativeStackNavigator<MdStackParams>();
 const MdReportsStack = createNativeStackNavigator<MdStackParams>();
 const MdExpenseStack = createNativeStackNavigator<MdStackParams>();
@@ -529,6 +531,24 @@ function ServiceEngineerReportsNavigator() {
   );
 }
 
+/** A bare header bar for this tab — without it the content sits flush at y=0 and overlaps the phone's status bar. */
+function ServiceEngineerDashboardNavigator() {
+  return (
+    <ServiceEngineerDashboardStack.Navigator screenOptions={header}>
+      <ServiceEngineerDashboardStack.Screen name="ServiceEngineerDashboard" component={ServiceEngineerDashboardScreen} options={{ title: 'Dashboard' }} />
+    </ServiceEngineerDashboardStack.Navigator>
+  );
+}
+
+/** Same reason as ServiceEngineerDashboardNavigator above — gives Profile its header bar / status-bar clearance. */
+function ServiceEngineerProfileNavigator() {
+  return (
+    <ServiceEngineerProfileStack.Navigator screenOptions={header}>
+      <ServiceEngineerProfileStack.Screen name="ServiceEngineerProfile" component={ServiceEngineerProfileScreen} options={{ title: 'Profile' }} />
+    </ServiceEngineerProfileStack.Navigator>
+  );
+}
+
 function MdHomeNavigator() {
   return (
     <MdHomeStack.Navigator screenOptions={header}>
@@ -771,9 +791,9 @@ function ServiceEngineerAppTabs() {
     >
       <Tabs.Screen name="ServiceEngineerHomeTab" component={ServiceEngineerHomeNavigator} options={{ title: 'Home', tabBarLabel: 'Home', tabBarIcon: tabIcon('⌂') }} />
       <Tabs.Screen name="Jobs" component={ServiceNavigator} options={{ title: 'Jobs', tabBarLabel: 'Jobs', tabBarIcon: tabIcon('▤') }} />
-      <Tabs.Screen name="ServiceEngineerDashboardTab" component={ServiceEngineerDashboardScreen} options={{ title: 'Dashboard', tabBarLabel: 'Dashboard', tabBarIcon: tabIcon('◎') }} />
+      <Tabs.Screen name="ServiceEngineerDashboardTab" component={ServiceEngineerDashboardNavigator} options={{ title: 'Dashboard', tabBarLabel: 'Dashboard', tabBarIcon: tabIcon('◎') }} />
       <Tabs.Screen name="ServiceEngineerReportsTab" component={ServiceEngineerReportsNavigator} options={{ title: 'Reports', tabBarLabel: 'Reports', tabBarIcon: tabIcon('▣') }} />
-      <Tabs.Screen name="ServiceEngineerProfileTab" component={ServiceEngineerProfileScreen} options={{ title: 'Profile', tabBarLabel: 'Profile', tabBarIcon: tabIcon('◉') }} />
+      <Tabs.Screen name="ServiceEngineerProfileTab" component={ServiceEngineerProfileNavigator} options={{ title: 'Profile', tabBarLabel: 'Profile', tabBarIcon: tabIcon('◉') }} />
       <Tabs.Screen name="More" component={MoreNavigator} options={{ headerShown: false, tabBarIcon: tabIcon('⋯') }} />
     </Tabs.Navigator>
   );
