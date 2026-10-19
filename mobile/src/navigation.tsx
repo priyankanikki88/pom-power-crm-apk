@@ -76,6 +76,9 @@ import { ServiceHeadApprovalsScreen } from './screens/ServiceHeadApprovalsScreen
 import { HrHomeScreen } from './screens/HrHomeScreen';
 import { HrEmployeesScreen, HrEmployeeDetailScreen } from './screens/HrEmployeesScreen';
 import { HrApprovalsScreen } from './screens/HrApprovalsScreen';
+import { JobOpeningsScreen, JobOpeningDetailScreen, JobOpeningFormScreen, JobApplicationFormScreen } from './screens/RecruitmentScreens';
+import { TrainingSessionsScreen, TrainingSessionDetailScreen, TrainingSessionFormScreen } from './screens/TrainingScreens';
+import { AppraisalsScreen, AppraisalDetailScreen, AppraisalFormScreen } from './screens/PerformanceScreens';
 import { brand, colors } from './theme';
 
 export type CustomersStackParams = {
@@ -221,6 +224,16 @@ export type HrStackParams = {
   HrEmployeeDetail: { id: string; name: string };
   HrAttendance: undefined;
   HrApprovals: undefined;
+  JobOpenings: undefined;
+  JobOpeningDetail: { id: string; title: string };
+  JobOpeningForm: { id?: string } | undefined;
+  JobApplicationForm: { jobOpeningId: string };
+  TrainingSessions: undefined;
+  TrainingSessionDetail: { id: string; title: string };
+  TrainingSessionForm: { id?: string } | undefined;
+  Appraisals: undefined;
+  AppraisalDetail: { id: string; name: string };
+  AppraisalForm: undefined;
 } & Pick<MoreStackParams, 'Leave' | 'LeaveForm'>;
 
 const Tabs = createBottomTabNavigator();
@@ -667,6 +680,16 @@ function HrHomeNavigator() {
     <HrHomeStack.Navigator screenOptions={header}>
       <HrHomeStack.Screen name="HrHome" component={HrHomeScreen} options={{ title: 'Home' }} />
       <HrHomeStack.Screen name="HrApprovals" component={HrApprovalsScreen} options={{ title: 'Approval Center' }} />
+      <HrHomeStack.Screen name="JobOpenings" component={JobOpeningsScreen} options={{ title: 'Recruitment' }} />
+      <HrHomeStack.Screen name="JobOpeningDetail" component={JobOpeningDetailScreen} options={({ route }) => ({ title: route.params.title })} />
+      <HrHomeStack.Screen name="JobOpeningForm" component={JobOpeningFormScreen} options={({ route }) => ({ title: route.params?.id ? 'Edit Opening' : 'New Job Opening' })} />
+      <HrHomeStack.Screen name="JobApplicationForm" component={JobApplicationFormScreen} options={{ title: 'Add Application' }} />
+      <HrHomeStack.Screen name="TrainingSessions" component={TrainingSessionsScreen} options={{ title: 'Training & Development' }} />
+      <HrHomeStack.Screen name="TrainingSessionDetail" component={TrainingSessionDetailScreen} options={({ route }) => ({ title: route.params.title })} />
+      <HrHomeStack.Screen name="TrainingSessionForm" component={TrainingSessionFormScreen} options={({ route }) => ({ title: route.params?.id ? 'Edit Training' : 'Schedule Training' })} />
+      <HrHomeStack.Screen name="Appraisals" component={AppraisalsScreen} options={{ title: 'Performance & Appraisal' }} />
+      <HrHomeStack.Screen name="AppraisalDetail" component={AppraisalDetailScreen} options={({ route }) => ({ title: route.params.name })} />
+      <HrHomeStack.Screen name="AppraisalForm" component={AppraisalFormScreen} options={{ title: 'Start Appraisal' }} />
     </HrHomeStack.Navigator>
   );
 }

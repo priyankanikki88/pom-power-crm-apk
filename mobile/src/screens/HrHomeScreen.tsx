@@ -62,10 +62,17 @@ export function HrHomeScreen() {
         </Card>
       ) : null}
 
-      <Pressable style={styles.approvalsLink} onPress={() => navigation.navigate('HrApprovals')} accessibilityRole="button">
-        <Text style={styles.approvalsLinkText}>Approval Center</Text>
-        <Text style={styles.approvalsLinkArrow}>{'›'}</Text>
-      </Pressable>
+      {[
+        { screen: 'HrApprovals', label: 'Approval Center' },
+        { screen: 'JobOpenings', label: 'Recruitment' },
+        { screen: 'TrainingSessions', label: 'Training & Development' },
+        { screen: 'Appraisals', label: 'Performance & Appraisal' },
+      ].map((it) => (
+        <Pressable key={it.screen} style={styles.approvalsLink} onPress={() => navigation.navigate(it.screen)} accessibilityRole="button">
+          <Text style={styles.approvalsLinkText}>{it.label}</Text>
+          <Text style={styles.approvalsLinkArrow}>{'›'}</Text>
+        </Pressable>
+      ))}
     </ScrollView>
   );
 }
@@ -94,7 +101,7 @@ const styles = StyleSheet.create({
   statValue: { fontSize: 20, fontWeight: '800', color: colors.text, marginTop: 2 },
   statHint: { fontSize: 11, color: colors.muted, marginTop: 2 },
   cardTitle: { marginBottom: space.sm },
-  approvalsLink: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: colors.surface, borderRadius: radius.lg, borderWidth: 1, borderColor: colors.border, padding: space.lg },
+  approvalsLink: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: colors.surface, borderRadius: radius.lg, borderWidth: 1, borderColor: colors.border, padding: space.lg, marginBottom: space.sm },
   approvalsLinkText: { fontSize: 14.5, fontWeight: '700', color: colors.text },
   approvalsLinkArrow: { fontSize: 20, color: colors.muted },
 });
