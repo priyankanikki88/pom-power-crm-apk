@@ -6,11 +6,12 @@ import { Card, ErrorBox, text } from '../components/ui';
 import { api, ApiError } from '../lib/api';
 import { colors, radius, space } from '../theme';
 
-type Period = 'today' | 'week' | 'month';
+type Period = 'today' | 'week' | 'month' | 'financialYear';
 const PERIODS: Array<{ value: Period; label: string }> = [
   { value: 'today', label: 'Today' },
   { value: 'week', label: 'This Week' },
   { value: 'month', label: 'This Month' },
+  { value: 'financialYear', label: 'This Year' },
 ];
 
 interface MyDashboard {
@@ -28,9 +29,9 @@ interface MyDashboard {
 
 const errorText = (err: unknown, fallback: string) => (err instanceof ApiError ? err.message : fallback);
 
-/** The Service Engineer's own performance dashboard — the same numbers Reports draws on, by Today / Week / Month. */
+/** The Service Engineer's own performance dashboard — the same numbers Reports draws on, by Today / Week / Month / This Year (financial year). */
 export function ServiceEngineerDashboardScreen() {
-  const [period, setPeriod] = useState<Period>('today');
+  const [period, setPeriod] = useState<Period>('financialYear');
   const q = useQuery({ queryKey: ['service', 'my-dashboard', period], queryFn: () => api.get<MyDashboard>('/service/my-dashboard', { period }) });
   const d = q.data;
 

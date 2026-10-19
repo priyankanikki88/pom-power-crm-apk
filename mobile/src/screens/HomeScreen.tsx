@@ -60,7 +60,7 @@ export function HomeScreen() {
   const { user, hasPermission } = useAuth();
   const navigation = useNavigation<NavigationProp<Record<string, object | undefined>>>();
   const attendance = useQuery({ queryKey: ['attendance', 'today'], queryFn: () => api.get<{ canMark: boolean; status: string }>('/attendance/today') });
-  const summary = useQuery({ queryKey: ['dashboard-summary', 'month'], queryFn: () => api.get<Summary>('/dashboard/summary', { period: 'month', trend: 'daily', productBasis: 'QUOTATION', tz: timeZone() }) });
+  const summary = useQuery({ queryKey: ['dashboard-summary', 'financialYear'], queryFn: () => api.get<Summary>('/dashboard/summary', { period: 'financialYear', trend: 'daily', productBasis: 'QUOTATION', tz: timeZone() }) });
   const followUps = useQuery({ queryKey: ['follow-ups', 'dashboard'], queryFn: () => api.get<FollowUps>('/follow-ups/dashboard'), enabled: hasPermission('followup.read') });
   const service = useQuery({ queryKey: ['service', 'summary'], queryFn: () => api.get<ServiceSummary>('/service/summary'), enabled: hasPermission('service.read') });
   const k = summary.data?.kpis;

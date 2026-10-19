@@ -73,6 +73,9 @@ import { ServiceHeadTechTeamScreen } from './screens/ServiceHeadTechTeamScreen';
 import { ServiceHeadReportsMenuScreen } from './screens/ServiceHeadReportsMenuScreen';
 import { ServiceHeadSlaScreen } from './screens/ServiceHeadSlaScreen';
 import { ServiceHeadApprovalsScreen } from './screens/ServiceHeadApprovalsScreen';
+import { HrHomeScreen } from './screens/HrHomeScreen';
+import { HrEmployeesScreen, HrEmployeeDetailScreen } from './screens/HrEmployeesScreen';
+import { HrApprovalsScreen } from './screens/HrApprovalsScreen';
 import { brand, colors } from './theme';
 
 export type CustomersStackParams = {
@@ -207,6 +210,19 @@ export type ServiceHeadStackParams = {
   ServiceHeadApprovals: undefined;
 } & Pick<MoreStackParams, 'Reports' | 'ReportViewer'>;
 
+/** The HR Head role's own screens — Home, Employees (list + detail), and the expense-claim Approval Center. Attendance
+ * reuses MdAttendanceOverviewScreen directly (same company-wide data, same report.attendance permission this role
+ * already holds); Leave reuses the existing Leave screen wholesale (it already has its own Approve/Reject queue,
+ * gated on attendance.manage — which this oversight-only role doesn't hold, so it renders read-only here, same as
+ * any other role without that permission); More reuses MoreNavigator, same as every other role's "More" tab. */
+export type HrStackParams = {
+  HrHome: undefined;
+  HrEmployees: undefined;
+  HrEmployeeDetail: { id: string; name: string };
+  HrAttendance: undefined;
+  HrApprovals: undefined;
+} & Pick<MoreStackParams, 'Leave' | 'LeaveForm'>;
+
 const Tabs = createBottomTabNavigator();
 const CustomersStack = createNativeStackNavigator<CustomersStackParams>();
 const FollowUpsStack = createNativeStackNavigator<FollowUpsStackParams>();
@@ -227,6 +243,10 @@ const ServiceHeadHomeStack = createNativeStackNavigator<ServiceHeadStackParams>(
 const ServiceHeadVisitsStack = createNativeStackNavigator<ServiceHeadStackParams>();
 const ServiceHeadTechTeamStack = createNativeStackNavigator<ServiceHeadStackParams>();
 const ServiceHeadReportsStack = createNativeStackNavigator<ServiceHeadStackParams>();
+const HrHomeStack = createNativeStackNavigator<HrStackParams>();
+const HrEmployeesStack = createNativeStackNavigator<HrStackParams>();
+const HrAttendanceStack = createNativeStackNavigator<HrStackParams>();
+const HrLeaveStack = createNativeStackNavigator<HrStackParams>();
 
 const header = { headerStyle: { backgroundColor: colors.navy }, headerTintColor: '#ffffff', headerTitleStyle: { fontWeight: '700' as const } };
 
@@ -642,6 +662,70 @@ function ServiceHeadAppTabs() {
   );
 }
 
+function HrHomeNavigator() {
+  return (
+    <HrHomeStack.Navigator screenOptions={header}>
+      <HrHomeStack.Screen name="HrHome" component={HrHomeScreen} options={{ title: 'Home' }} />
+      <HrHomeStack.Screen name="HrApprovals" component={HrApprovalsScreen} options={{ title: 'Approval Center' }} />
+    </HrHomeStack.Navigator>
+  );
+}
+
+function HrEmployeesNavigator() {
+  return (
+    <HrEmployeesStack.Navigator screenOptions={header}>
+      <HrEmployeesStack.Screen name="HrEmployees" component={HrEmployeesScreen} options={{ title: 'Employees' }} />
+      <HrEmployeesStack.Screen name="HrEmployeeDetail" component={HrEmployeeDetailScreen} options={({ route }) => ({ title: route.params.name })} />
+    </HrEmployeesStack.Navigator>
+  );
+}
+
+function HrAttendanceNavigator() {
+  return (
+    <HrAttendanceStack.Navigator screenOptions={header}>
+      <HrAttendanceStack.Screen name="HrAttendance" component={MdAttendanceOverviewScreen} options={{ title: 'Attendance Overview' }} />
+    </HrAttendanceStack.Navigator>
+  );
+}
+
+function HrLeaveNavigator() {
+  return (
+    <HrLeaveStack.Navigator screenOptions={header}>
+      <HrLeaveStack.Screen name="Leave" component={LeaveScreen} options={{ title: 'Leave Management' }} />
+      <HrLeaveStack.Screen name="LeaveForm" component={LeaveFormScreen} options={{ title: 'Apply for Leave' }} />
+    </HrLeaveStack.Navigator>
+  );
+}
+
+/**
+ * The HR Head role's own 5-tab layout (Home / Employees / Attendance / Leave / More), matching the mockup's own
+ * footer. Approval Center is reached from Home (no dedicated tab in the mockup either — it lives under a "Tasks /
+ * Approvals" screen reached from the menu there). Recruitment, Training & Development and Performance & Appraisal
+ * from the mockup are not built: no model for any of the three exists anywhere in this schema — a genuinely new
+ * domain each, not a missing screen over existing data.
+ */
+function HrHeadAppTabs() {
+  const insets = useSafeAreaInsets();
+  usePushNavigation('More');
+  return (
+    <Tabs.Navigator
+      screenOptions={{
+        headerShown: false,
+        tabBarActiveTintColor: brand.blue,
+        tabBarInactiveTintColor: colors.muted,
+        tabBarLabelStyle: styles.tabLabel,
+        tabBarStyle: { height: 56 + insets.bottom, paddingBottom: insets.bottom + 6, paddingTop: 6 },
+      }}
+    >
+      <Tabs.Screen name="HrHomeTab" component={HrHomeNavigator} options={{ title: 'Home', tabBarLabel: 'Home', tabBarIcon: tabIcon('⌂') }} />
+      <Tabs.Screen name="HrEmployeesTab" component={HrEmployeesNavigator} options={{ title: 'Employees', tabBarLabel: 'Employees', tabBarIcon: tabIcon('👥') }} />
+      <Tabs.Screen name="HrAttendanceTab" component={HrAttendanceNavigator} options={{ title: 'Attendance', tabBarLabel: 'Attendance', tabBarIcon: tabIcon('✓') }} />
+      <Tabs.Screen name="HrLeaveTab" component={HrLeaveNavigator} options={{ title: 'Leave', tabBarLabel: 'Leave', tabBarIcon: tabIcon('🗓') }} />
+      <Tabs.Screen name="More" component={MoreNavigator} options={{ headerShown: false, tabBarIcon: tabIcon('⋯') }} />
+    </Tabs.Navigator>
+  );
+}
+
 /**
  * A Service Engineer's own 6-tab layout (Home / Jobs / Dashboard / Reports / Profile / More), matching the pasted
  * mockup's own footer choice — the Jobs tab reuses ServiceNavigator exactly as it already works (ServiceHomeRouter
@@ -688,9 +772,22 @@ export function RootNavigator() {
   const isServiceEngineer = !isSales && (user.userRoles?.some((r) => r.role.name === 'Service Engineer') ?? false);
   const isMdCeo = !isSales && !isServiceEngineer && (user.userRoles?.some((r) => r.role.name === 'MD / CEO') ?? false);
   const isServiceHead = !isSales && !isServiceEngineer && !isMdCeo && (user.userRoles?.some((r) => r.role.name === 'Service Head') ?? false);
+  const isHrHead = !isSales && !isServiceEngineer && !isMdCeo && !isServiceHead && (user.userRoles?.some((r) => r.role.name === 'HR Head') ?? false);
   return (
     <NavigationContainer>
-      {isSales ? <SalesAppTabs /> : isServiceEngineer ? <ServiceEngineerAppTabs /> : isMdCeo ? <MdCeoAppTabs /> : isServiceHead ? <ServiceHeadAppTabs /> : <AppTabs />}
+      {isSales ? (
+        <SalesAppTabs />
+      ) : isServiceEngineer ? (
+        <ServiceEngineerAppTabs />
+      ) : isMdCeo ? (
+        <MdCeoAppTabs />
+      ) : isServiceHead ? (
+        <ServiceHeadAppTabs />
+      ) : isHrHead ? (
+        <HrHeadAppTabs />
+      ) : (
+        <AppTabs />
+      )}
     </NavigationContainer>
   );
 }
