@@ -4,7 +4,7 @@ $out = __DIR__ . '/out.txt';
 file_put_contents($out, "STARTED " . date('c') . "\n");
 try {
 chdir('/home/u843646515/domains/crm.urbandryclean.in/public_html');
-require 'config/database.php';
+$_SERVER['HTTP_HOST'] = $_SERVER['HTTP_HOST'] ?? 'crm.urbandryclean.in'; require_once 'config/config.php'; require_once 'config/database.php';
 $db = Database::getConnection();
 $t = $db->query('SHOW TABLES')->fetchAll(PDO::FETCH_COLUMN);
 $s = "TABLES\t" . implode(',', $t) . "\n";
