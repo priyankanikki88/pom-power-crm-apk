@@ -2,13 +2,13 @@
   "expo": {
     "name": "POM POWER CRM",
     "slug": "pom-power-crm",
-    "version": "1.9.1",
+    "version": "1.10.1",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
     "android": {
       "package": "com.pompower.crm",
-      "versionCode": 30,
+      "versionCode": 32,
       "adaptiveIcon": {
         "backgroundColor": "#0f172a",
         "foregroundImage": "./assets/android-icon-foreground.png",
@@ -16,6 +16,11 @@
         "monochromeImage": "./assets/android-icon-monochrome.png"
       },
       "predictiveBackGestureEnabled": false
+    },
+    "ios": {
+      "bundleIdentifier": "com.pompower.crm",
+      "buildNumber": "1",
+      "supportsTablet": false
     },
     "plugins": [
       "expo-secure-store",

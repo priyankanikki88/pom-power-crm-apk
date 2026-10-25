@@ -23,6 +23,7 @@ import { FollowUpsScreen } from './screens/FollowUpsScreen';
 import { HomeScreen } from './screens/HomeScreen';
 import { LoginScreen } from './screens/LoginScreen';
 import { LeadActivityFormScreen, LeadDetailScreen, LeadFormScreen, LeadsScreen } from './screens/LeadScreens';
+import { CallLogConvertTicketScreen, CallLogFormScreen, CallLogsScreen } from './screens/CallLogScreens';
 import { CardScanScreen } from './screens/CardScanScreen';
 import type { CardData } from './lib/cardScan';
 import { B2CCaseDetailScreen, B2CCaseFormScreen, B2CCasesScreen, DiscomFormScreen, DiscomsScreen } from './screens/DiscomScreens';
@@ -153,6 +154,9 @@ export type MoreStackParams = {
   /** `view` is the list the task was opened from (the detail reads it from that list). */
   TaskDetail: { id: string; view: TaskView; title: string };
   TaskForm: undefined;
+  CallLogs: undefined;
+  CallLogForm: undefined;
+  CallLogConvertTicket: { id: string };
   Leads: undefined;
   LeadDetail: { id: string };
   /** No id = add a lead. */
@@ -182,7 +186,7 @@ export type SalesStackParams = {
   ChatThread: { id: string; name: string };
 } & Pick<CustomersStackParams, 'CustomerList' | 'CustomerDetail' | 'CustomerForm'> &
   Pick<QuotationsStackParams, 'QuotationList' | 'QuotationDetail' | 'QuotationForm' | 'DocDetail' | 'BillDetail'> &
-  Pick<MoreStackParams, 'Expenses' | 'ExpenseDetail' | 'ExpenseForm' | 'Targets' | 'Tours' | 'TourDetail' | 'TourForm' | 'Leads' | 'LeadDetail' | 'LeadForm' | 'CardScan' | 'LeadActivityForm' | 'Attendance' | 'Notifications' | 'TeamManagement' | 'Campaigns' | 'CampaignDetail' | 'CampaignForm' | 'EmailCampaigns' | 'EmailCampaignDetail' | 'EmailCampaignForm'>;
+  Pick<MoreStackParams, 'Expenses' | 'ExpenseDetail' | 'ExpenseForm' | 'Targets' | 'Tours' | 'TourDetail' | 'TourForm' | 'CallLogs' | 'CallLogForm' | 'CallLogConvertTicket' | 'Leads' | 'LeadDetail' | 'LeadForm' | 'CardScan' | 'LeadActivityForm' | 'Attendance' | 'Notifications' | 'TeamManagement' | 'Campaigns' | 'CampaignDetail' | 'CampaignForm' | 'EmailCampaigns' | 'EmailCampaignDetail' | 'EmailCampaignForm'>;
 export type ProductsStackParams = { ProductList: undefined; ProductDetail: { id: string } };
 
 /** The MD / CEO role's own screens — Home, the Sales Report family, Top Employees, Target Achievement, Sales Pipeline,
@@ -360,6 +364,9 @@ function MoreNavigator() {
       <MoreStack.Screen name="Tasks" component={TasksScreen} options={{ title: 'Tasks' }} />
       <MoreStack.Screen name="TaskDetail" component={TaskDetailScreen} options={{ title: 'Task' }} />
       <MoreStack.Screen name="TaskForm" component={TaskFormScreen} options={{ title: 'Give Tasks' }} />
+      <MoreStack.Screen name="CallLogs" component={CallLogsScreen} options={{ title: 'Call Log' }} />
+      <MoreStack.Screen name="CallLogForm" component={CallLogFormScreen} options={{ title: 'Log a Call' }} />
+      <MoreStack.Screen name="CallLogConvertTicket" component={CallLogConvertTicketScreen} options={{ title: 'Convert to Service Ticket' }} />
       <MoreStack.Screen name="Leads" component={LeadsScreen} options={{ title: 'Leads' }} />
       <MoreStack.Screen name="LeadDetail" component={LeadDetailScreen} options={{ title: 'Lead' }} />
       <MoreStack.Screen name="LeadForm" component={LeadFormScreen} options={({ route }) => ({ title: route.params?.id ? 'Edit Lead' : 'Add Lead' })} />
@@ -394,6 +401,9 @@ function SalesNavigator() {
       <SalesStack.Screen name="Tours" component={ToursScreen} options={{ title: 'Tour Plans' }} />
       <SalesStack.Screen name="TourDetail" component={TourDetailScreen} options={({ route }) => ({ title: route.params.no })} />
       <SalesStack.Screen name="TourForm" component={TourFormScreen} options={({ route }) => ({ title: route.params?.id ? 'Edit Tour Plan' : 'Plan Tour' })} />
+      <SalesStack.Screen name="CallLogs" component={CallLogsScreen} options={{ title: 'Call Log' }} />
+      <SalesStack.Screen name="CallLogForm" component={CallLogFormScreen} options={{ title: 'Log a Call' }} />
+      <SalesStack.Screen name="CallLogConvertTicket" component={CallLogConvertTicketScreen} options={{ title: 'Convert to Service Ticket' }} />
       <SalesStack.Screen name="Leads" component={LeadsScreen} options={{ title: 'Leads' }} />
       <SalesStack.Screen name="LeadDetail" component={LeadDetailScreen} options={{ title: 'Lead' }} />
       <SalesStack.Screen name="LeadForm" component={LeadFormScreen} options={({ route }) => ({ title: route.params?.id ? 'Edit Lead' : 'Add Lead' })} />

@@ -53,6 +53,10 @@ export function MoreScreen({ navigation }: NativeStackScreenProps<MoreStackParam
           <Button title={`Waiting to Send (${waiting.length})`} onPress={() => navigation.navigate('Outbox')} />
         </View>
       ) : null}
+      {/* Logging a call is the very first thing to happen on a real enquiry — open to everyone, no permission needed, so it sits above even Leads. */}
+      <View style={styles.link}>
+        <Button title="Call Log" variant="secondary" onPress={() => navigation.navigate('CallLogs')} />
+      </View>
       {/* A lead is the first thing captured, so it (and B2C, which follows a won lead) sits right at the top of More — matches the web CRM's sidebar order. */}
       {hasPermission('lead.read') ? (
         <View style={styles.link}>

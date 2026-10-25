@@ -7,6 +7,7 @@ import { Card, text } from '../components/ui';
 import { api, ApiError } from '../lib/api';
 import { formatINRCompact } from '../lib/format';
 import { brand, colors, radius, space } from '../theme';
+import { usePendingCallLogCount } from './CallLogScreens';
 
 interface MdHome {
   period: { fromDate: string; toDate: string };
@@ -31,6 +32,7 @@ export function MdHomeScreen() {
   const { user } = useAuth();
   const q = useQuery({ queryKey: ['md', 'home'], queryFn: () => api.get<MdHome>('/dashboard/md/home') });
   const d = q.data;
+  const pendingCallLogs = usePendingCallLogCount();
   const hour = new Date().getHours();
   const greeting = hour < 12 ? 'Good Morning' : hour < 17 ? 'Good Afternoon' : 'Good Evening';
 
@@ -76,6 +78,9 @@ export function MdHomeScreen() {
           <Stat label="Pending Approvals" value={String(d.pendingApprovals)} tone={d.pendingApprovals > 0 ? colors.warning : undefined} onPress={() => navigation.navigate('Approval')} />
         ) : null}
         {d?.pendingTasks !== null && d?.pendingTasks !== undefined ? <Stat label="Pending Tasks" value={String(d.pendingTasks)} tone={d.pendingTasks > 0 ? colors.warning : undefined} /> : null}
+        {pendingCallLogs.data !== undefined ? (
+          <Stat label="Pending Call Logs" value={String(pendingCallLogs.data)} tone={pendingCallLogs.data > 0 ? colors.warning : undefined} onPress={() => navigation.navigate('More', { screen: 'CallLogs' })} />
+        ) : null}
       </View>
     </ScrollView>
   );

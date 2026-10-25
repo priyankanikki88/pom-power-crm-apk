@@ -43,6 +43,7 @@ const GROUP_LABEL: Record<string, string> = {
   PAYMENT: 'Payment',
   CUSTOMER: 'Customer',
   TARGET: 'Targets',
+  KPI: 'KPI / Performance',
   ATTENDANCE: 'Attendance',
   EXPENSE: 'Expenses',
   TOUR: 'Tour Plans',

@@ -15,6 +15,8 @@ interface Tile {
 }
 
 const TILES: Tile[] = [
+  // The first thing that happens on a real call, before anyone knows yet whether it's a sale or a complaint.
+  { key: 'call-log', label: 'Call Log', icon: '☎', bg: '#e0f2fe', fg: '#0369a1', onPress: (n) => n.navigate('CallLogForm') },
   { key: 'lead', label: 'Lead', icon: '✦', bg: '#eaf0fe', fg: '#2f5fe0', onPress: (n) => n.navigate('Leads') },
   { key: 'followup', label: 'Follow-up', icon: '✆', bg: '#e9f7ef', fg: '#12803c', onPress: (n) => n.navigate('FollowUps', { screen: 'FollowUpList' }) },
   { key: 'customer', label: 'Customer', icon: '◉', bg: '#fef3e0', fg: '#b45309', onPress: (n) => n.navigate('CustomerList') },
