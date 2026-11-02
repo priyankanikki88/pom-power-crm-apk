@@ -1,12 +1,12 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, Linking, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { ChipSelect } from '../components/inputs';
 import { Button, Card, ErrorBox, Field, Row, text } from '../components/ui';
 import { api, ApiError } from '../lib/api';
 import { formatDate } from '../lib/dates';
 import { enumLabel } from '../lib/format';
-import { getPunchLocation, type PunchLocation } from '../lib/location';
+import { getPunchLocation, startFieldTracking, stopFieldTracking, type PunchLocation } from '../lib/location';
 import { colors, space } from '../theme';
 
 interface Today {
@@ -37,6 +37,13 @@ const TONE: Record<string, string> = { PRESENT: colors.success, WFH: colors.succ
 const LABEL: Record<string, string> = { OD: 'Field / On Duty', WFH: 'Work From Home', NOT_MARKED: 'Not Marked', WEEKLY_OFF: 'Weekly Off' };
 const label = (s: string) => LABEL[s] ?? enumLabel(s);
 const time = (iso: string) => new Date(iso).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Kolkata' });
+/** "Today's Summary" work duration: punch-in to punch-out, or punch-in to now while still clocked in (as of the last refresh — not a live ticking clock). */
+const duration = (fromIso: string, toIso: string | null) => {
+  const mins = Math.max(0, Math.round(((toIso ? new Date(toIso).getTime() : Date.now()) - new Date(fromIso).getTime()) / 60_000));
+  const h = Math.floor(mins / 60);
+  const m = mins % 60;
+  return h > 0 ? `${h}h ${m}m` : `${m}m`;
+};
 /** The server (before it learned about location) refuses unknown fields with this wording. */
 const rejectsLocation = (err: unknown) => err instanceof ApiError && err.status === 400 && /latitude|longitude|accuracy/i.test(err.message) && /should not exist/i.test(err.message);
 
@@ -60,6 +67,12 @@ export function AttendanceScreen() {
   const [error, setError] = useState<string | null>(null);
   const [note, setNote] = useState<string | null>(null);
   const t = today.data;
+
+  // Safety net for a punch-in that happened in an earlier app session (e.g. the phone restarted): resumes the
+  // background trail rather than leaving the rest of the day untracked. A no-op if it is already running.
+  useEffect(() => {
+    if (t?.record?.punchInAt && !t.record.punchOutAt) void startFieldTracking();
+  }, [t?.record?.punchInAt, t?.record?.punchOutAt]);
 
   const refresh = () => {
     void qc.invalidateQueries({ queryKey: ['attendance'] });
@@ -109,8 +122,18 @@ export function AttendanceScreen() {
     }
   }
 
-  const mark = () => withLocation('mark', (location) => send('/attendance/mark', { ...(mode ? { workModeId: mode.id } : { kind }), remarks: remarks.trim() || undefined }, location));
-  const punchOut = () => withLocation('out', (location) => send('/attendance/punch-out', {}, location));
+  const mark = () =>
+    withLocation('mark', async (location) => {
+      const result = await send('/attendance/mark', { ...(mode ? { workModeId: mode.id } : { kind }), remarks: remarks.trim() || undefined }, location);
+      await startFieldTracking();
+      return result;
+    });
+  const punchOut = () =>
+    withLocation('out', async (location) => {
+      const result = await send('/attendance/punch-out', {}, location);
+      await stopFieldTracking();
+      return result;
+    });
 
   const days = (month.data ?? []).filter((d) => d.date <= (t?.date ?? '9999')).reverse();
   const count = (s: string) => days.filter((d) => d.status === s).length;
@@ -149,6 +172,7 @@ export function AttendanceScreen() {
             <Row label="Location" value="Not recorded" />
           ) : null}
           {t.record?.punchOutAt ? <Row label="Punched out" value={time(t.record.punchOutAt)} /> : null}
+          {t.record?.punchInAt ? <Row label="Work duration" value={duration(t.record.punchInAt, t.record.punchOutAt)} /> : null}
 
           {t.canMark ? (
             <View style={styles.gap}>

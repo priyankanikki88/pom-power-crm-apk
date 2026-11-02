@@ -63,6 +63,13 @@ export function ServiceEngineerProfileScreen() {
           <Button title="View Reports" variant="secondary" onPress={() => navigation.navigate('Reports')} />
         </View>
       </Card>
+
+      <View style={styles.link}>
+        <Button title="Edit My Profile" variant="secondary" onPress={() => navigation.navigate('ProfileEdit')} />
+      </View>
+      <View style={styles.link}>
+        <Button title="My Payslips" variant="secondary" onPress={() => navigation.navigate('Payslips')} />
+      </View>
     </ScrollView>
   );
 }

@@ -31,8 +31,9 @@ const CONFIRM_OPTIONS = [
 
 /**
  * One service ticket (complaint). The assigned engineer works it from here: Start Work, file the service report, note
- * parts used, put it on hold / resume, book a revisit, resolve. Assigning, closing and reopening are the coordinator's
- * steps and stay on the web CRM. `canWork` comes from the server — the app never decides who may work a ticket.
+ * parts used, put it on hold / resume, book a revisit, resolve. A coordinator can also close a resolved ticket from
+ * here. Assigning and reopening stay on the web CRM. `canWork`/`canCoordinate` come from the server — the app never
+ * decides who may work or coordinate a ticket.
  */
 export function TicketDetailScreen({ route }: NativeStackScreenProps<ServiceStackParams, 'TicketDetail'>) {
   const { id } = route.params;
@@ -184,6 +185,13 @@ export function TicketDetailScreen({ route }: NativeStackScreenProps<ServiceStac
         </Card>
       ) : null}
       {!t.canWork && working ? <Text style={[text.muted, styles.foot]}>Only the assigned engineer or a service coordinator records the work on this ticket.</Text> : null}
+
+      {t.canCoordinate && t.status === 'RESOLVED' ? (
+        <Card>
+          <Text style={[text.h2, styles.section]}>Close ticket</Text>
+          <Button title="Close Ticket" loading={doing('close')} disabled={act.isPending} onPress={() => run('close')} />
+        </Card>
+      ) : null}
 
       <Card>
         <Text style={[text.h2, styles.section]}>Service reports ({t.reports.length})</Text>

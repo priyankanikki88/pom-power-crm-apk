@@ -29,6 +29,7 @@ const TILES: Tile[] = [
   { key: 'target', label: 'Target', icon: '◎', bg: '#e9f7ef', fg: '#12803c', onPress: (n) => n.navigate('Targets') },
   { key: 'tour', label: 'Tour Plan', icon: '⚑', bg: '#f1edfb', fg: '#6d3fd6', onPress: (n) => n.navigate('Tours') },
   { key: 'complaint', label: 'Complaint', icon: '!', bg: '#fdeded', fg: '#d92d20', onPress: (n) => n.navigate('Service', { screen: 'TicketForm' }) },
+  { key: 'profile', label: 'My Profile', icon: '◉', bg: '#eceefa', fg: '#383f8c', onPress: (n) => n.navigate('Profile') },
 ];
 
 /** Shown only for a Sales Head / manager (team.view) — everyone else keeps the plain 12-tile grid above. */

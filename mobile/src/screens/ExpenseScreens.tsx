@@ -1,7 +1,7 @@
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { useLayoutEffect, useState } from 'react';
+import { useEffect, useLayoutEffect, useState } from 'react';
 import { ActivityIndicator, Alert, FlatList, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { PdfButton } from '../components/docParts';
 import { ChipSelect } from '../components/inputs';
@@ -214,10 +214,25 @@ export function ExpenseFormScreen({ navigation }: NativeStackScreenProps<MoreSta
     misc: '',
   });
   const [error, setError] = useState<string | null>(null);
+  const [distanceTouched, setDistanceTouched] = useState(false);
   const set = (k: keyof typeof f) => (v: string) => setF((x) => ({ ...x, [k]: v }));
   const opt = (v: string) => v.trim() || undefined;
   const num = (v: string) => (v.trim() ? Number(v) : undefined);
   const tourTotal = TOUR_HEADS.reduce((sum, h) => sum + (Number(f[h]) || 0), 0);
+
+  // The day's automatic field-activity distance, offered as a starting point — never submitted without the chance to edit it.
+  const suggestedKm = useQuery({
+    queryKey: ['expenses', 'suggest-distance', isoDate(date)],
+    queryFn: () => api.get<{ suggestedKm: number }>('/expenses/suggest-distance', { date: isoDate(date) }),
+    enabled: type === 'LOCAL',
+    retry: false,
+  });
+  useEffect(() => {
+    setDistanceTouched(false);
+  }, [date]);
+  useEffect(() => {
+    if (type === 'LOCAL' && !distanceTouched && suggestedKm.data && suggestedKm.data.suggestedKm > 0) setF((x) => ({ ...x, distanceKm: String(suggestedKm.data!.suggestedKm) }));
+  }, [suggestedKm.data, type, distanceTouched]);
 
   const create = useMutation({
     mutationFn: () => {
@@ -297,7 +312,10 @@ export function ExpenseFormScreen({ navigation }: NativeStackScreenProps<MoreSta
             <Field label="From *" value={f.fromPlace} onChangeText={set('fromPlace')} maxLength={150} />
             <Field label="To *" value={f.toPlace} onChangeText={set('toPlace')} maxLength={150} />
             <Field label="Mode (bike, auto, bus…)" value={f.mode} onChangeText={set('mode')} maxLength={60} />
-            <Field label="Distance (km)" value={f.distanceKm} onChangeText={set('distanceKm')} keyboardType="decimal-pad" />
+            <Field label="Distance (km)" value={f.distanceKm} onChangeText={(v) => { setDistanceTouched(true); set('distanceKm')(v); }} keyboardType="decimal-pad" />
+            {!distanceTouched && suggestedKm.data && suggestedKm.data.suggestedKm > 0 ? (
+              <Text style={text.muted}>From your field activity that day — change it if it isn't right.</Text>
+            ) : null}
           </>
         ) : type === 'TOUR' ? (
           <>

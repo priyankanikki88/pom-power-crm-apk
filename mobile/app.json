@@ -2,13 +2,13 @@
   "expo": {
     "name": "POM POWER CRM",
     "slug": "pom-power-crm",
-    "version": "1.10.1",
+    "version": "1.10.3",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
     "android": {
       "package": "com.pompower.crm",
-      "versionCode": 32,
+      "versionCode": 34,
       "adaptiveIcon": {
         "backgroundColor": "#0f172a",
         "foregroundImage": "./assets/android-icon-foreground.png",
@@ -19,18 +19,22 @@
     },
     "ios": {
       "bundleIdentifier": "com.pompower.crm",
-      "buildNumber": "1",
+      "buildNumber": "2",
       "supportsTablet": false
     },
     "plugins": [
       "expo-secure-store",
       "expo-notifications",
       "expo-sharing",
+      "expo-task-manager",
       "@react-native-community/datetimepicker",
       [
         "expo-location",
         {
-          "locationWhenInUsePermission": "POM POWER CRM records where you are when you mark attendance."
+          "locationWhenInUsePermission": "POM POWER CRM records where you are when you mark attendance.",
+          "locationAlwaysAndWhenInUsePermission": "POM POWER CRM records your location in the background while you are clocked in, for the day-wise field activity report.",
+          "isAndroidBackgroundLocationEnabled": true,
+          "isAndroidForegroundServiceEnabled": true
         }
       ],
       [

@@ -6,8 +6,10 @@ import { AppState } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { AuthProvider, useAuth } from './src/auth/AuthContext';
 import { ApiError } from './src/lib/api';
+import { flushFieldPings } from './src/lib/location';
 import { createFilePersister, SAVED_DATA_MAX_AGE, shouldSaveQuery } from './src/lib/offlineCache';
 import { flushOutbox, startOutbox } from './src/lib/outbox';
+import { usePresencePing } from './src/lib/presence';
 import { registerForPush } from './src/lib/push';
 import { RootNavigator } from './src/navigation';
 
@@ -32,13 +34,18 @@ function OutboxRunner() {
   const { user } = useAuth();
   const qc = useQueryClient();
   const userId = user?.id ?? null;
+  usePresencePing(userId !== null);
   useEffect(() => {
     void startOutbox(userId, qc);
     if (!userId) return;
     void registerForPush();
-    const timer = setInterval(() => void flushOutbox(), 30_000);
+    const flush = () => {
+      void flushOutbox();
+      void flushFieldPings();
+    };
+    const timer = setInterval(flush, 30_000);
     const sub = AppState.addEventListener('change', (state) => {
-      if (state === 'active') void flushOutbox();
+      if (state === 'active') flush();
     });
     return () => {
       clearInterval(timer);

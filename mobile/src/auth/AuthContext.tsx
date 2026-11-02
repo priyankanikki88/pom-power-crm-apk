@@ -1,6 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { api, ApiError, currentRefreshToken, loadTokens, setSessionExpiredHandler, setTokens } from '../lib/api';
+import { clearFieldPings, stopFieldTracking } from '../lib/location';
 import { clearSavedData } from '../lib/offlineCache';
 import { clearMyOutbox } from '../lib/outbox';
 import { unregisterPush } from '../lib/push';
@@ -81,6 +82,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const logout = useCallback(async () => {
     const refreshToken = currentRefreshToken();
     await unregisterPush();
+    // Stops the background trail and makes a last attempt to send what's queued while this user's session is still valid.
+    await stopFieldTracking();
     try {
       if (refreshToken) await api.post('/auth/logout', { refreshToken });
     } catch {
@@ -89,6 +92,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await setTokens(null);
     removeJson(ME_FILE);
     clearMyOutbox();
+    // Whatever didn't make it out is dropped, not sent later attributed to whoever signs in next on this phone.
+    clearFieldPings();
     clearSavedData(qc);
     setUser(null);
   }, [qc]);

@@ -340,6 +340,43 @@ function LeadContactActions({ phone }: { phone: string }) {
   );
 }
 
+/**
+ * A quick note after the call: saved as a Completed "Call" activity on this lead (same model the Follow-ups &
+ * activity list already shows below), so no separate note history or backend change is needed.
+ */
+function LeadCallNoteBox({ leadId }: { leadId: string }) {
+  const qc = useQueryClient();
+  const [note, setNote] = useState('');
+  const [error, setError] = useState<string | null>(null);
+  const [saved, setSaved] = useState(false);
+
+  const save = useMutation({
+    mutationFn: () => api.post('/lead-activities', { type: 'Call', subject: 'Call update', dueDate: isoDay(new Date()), leadId, status: 'Completed', details: note.trim() }),
+    onSuccess: () => {
+      setNote('');
+      setSaved(true);
+      void qc.invalidateQueries({ queryKey: ['leads', 'activities'] });
+    },
+    onError: (err: unknown) => setError(errorText(err, 'Could not save the call update.')),
+  });
+
+  function submit() {
+    if (note.trim().length < 2) return setError('Write what happened on the call.');
+    setError(null);
+    setSaved(false);
+    save.mutate();
+  }
+
+  return (
+    <View style={styles.callNote}>
+      <Field label="Call update" value={note} onChangeText={(v) => { setNote(v); setSaved(false); }} placeholder="What did you discuss on the call?" multiline maxLength={1000} />
+      {error ? <ErrorBox message={error} /> : null}
+      {saved && !error ? <Text style={[text.muted, styles.savedNote]}>Saved.</Text> : null}
+      <Button title="Save Update" variant="secondary" onPress={submit} loading={save.isPending} />
+    </View>
+  );
+}
+
 /** One lead: identity, call/WhatsApp, details, requirement/remark and its follow-up schedule. Edit and Convert to Customer for roles that may; Documents/Notes from the mockup have no backend data to show yet, so they're left off rather than faked. */
 export function LeadDetailScreen({ route, navigation }: NativeStackScreenProps<MoreStackParams, 'LeadDetail'>) {
   const { id } = route.params;
@@ -398,6 +435,7 @@ export function LeadDetailScreen({ route, navigation }: NativeStackScreenProps<M
         </View>
         <Text style={text.muted}>{lead.company}</Text>
         {lead.phone ? <LeadContactActions phone={lead.phone} /> : null}
+        {lead.phone ? <LeadCallNoteBox leadId={id} /> : null}
         {canAddCustomer && lead.stage !== 'Lost' ? (
           <View style={styles.plan}>
             <Button title={lead.stage === 'Won' ? 'Create Customer' : 'Convert to Customer'} variant="secondary" loading={convert.isPending} onPress={() => convert.mutate()} />
@@ -697,6 +735,8 @@ const styles = StyleSheet.create({
   scanBlock: { marginBottom: space.md, gap: space.sm },
   plan: { marginTop: space.sm },
   actions: { flexDirection: 'row', gap: space.sm, marginTop: space.md },
+  callNote: { marginTop: space.md, gap: space.xs },
+  savedNote: { color: colors.success },
   action: { flex: 1, minHeight: 44, borderRadius: radius.md, alignItems: 'center', justifyContent: 'center' },
   actionText: { fontSize: 14, fontWeight: '700' },
 });

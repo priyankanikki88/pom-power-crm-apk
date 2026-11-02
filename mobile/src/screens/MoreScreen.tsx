@@ -46,6 +46,12 @@ export function MoreScreen({ navigation }: NativeStackScreenProps<MoreStackParam
         <Row label="Branch" value={user?.branch?.name} />
       </Card>
       <View style={styles.link}>
+        <Button title="My Profile" variant="secondary" onPress={() => navigation.navigate('Profile')} />
+      </View>
+      <View style={styles.link}>
+        <Button title="My Assets" variant="secondary" onPress={() => navigation.navigate('MyAssets')} />
+      </View>
+      <View style={styles.link}>
         <Button title={unread > 0 ? `Notifications (${unread} unread)` : 'Notifications'} variant={unread > 0 ? 'primary' : 'secondary'} onPress={() => navigation.navigate('Notifications')} />
       </View>
       {waiting.length > 0 ? (

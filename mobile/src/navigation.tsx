@@ -57,6 +57,9 @@ import { EmailCampaignDetailScreen, EmailCampaignFormScreen, EmailCampaignsScree
 import { ServiceEngineerHomeScreen } from './screens/ServiceEngineerHomeScreen';
 import { ServiceEngineerDashboardScreen } from './screens/ServiceEngineerDashboardScreen';
 import { ServiceEngineerProfileScreen } from './screens/ServiceEngineerProfileScreen';
+import { ProfileEditScreen, ProfileScreen } from './screens/ProfileScreens';
+import { PayslipsScreen } from './screens/PayslipsScreen';
+import { MyAssetsScreen } from './screens/MyAssetsScreen';
 import { SparePartsFormScreen, SparePartsScreen } from './screens/SparePartsScreen';
 import { MdHomeScreen } from './screens/MdHomeScreen';
 import { MdReportsMenuScreen } from './screens/MdReportsMenuScreen';
@@ -170,6 +173,10 @@ export type MoreStackParams = {
   B2CCaseDetail: { id: string; caseNo: string };
   Discoms: undefined;
   DiscomForm: undefined;
+  Profile: undefined;
+  ProfileEdit: undefined;
+  Payslips: undefined;
+  MyAssets: undefined;
 };
 
 /**
@@ -186,7 +193,7 @@ export type SalesStackParams = {
   ChatThread: { id: string; name: string };
 } & Pick<CustomersStackParams, 'CustomerList' | 'CustomerDetail' | 'CustomerForm'> &
   Pick<QuotationsStackParams, 'QuotationList' | 'QuotationDetail' | 'QuotationForm' | 'DocDetail' | 'BillDetail'> &
-  Pick<MoreStackParams, 'Expenses' | 'ExpenseDetail' | 'ExpenseForm' | 'Targets' | 'Tours' | 'TourDetail' | 'TourForm' | 'CallLogs' | 'CallLogForm' | 'CallLogConvertTicket' | 'Leads' | 'LeadDetail' | 'LeadForm' | 'CardScan' | 'LeadActivityForm' | 'Attendance' | 'Notifications' | 'TeamManagement' | 'Campaigns' | 'CampaignDetail' | 'CampaignForm' | 'EmailCampaigns' | 'EmailCampaignDetail' | 'EmailCampaignForm'>;
+  Pick<MoreStackParams, 'Expenses' | 'ExpenseDetail' | 'ExpenseForm' | 'Targets' | 'Tours' | 'TourDetail' | 'TourForm' | 'CallLogs' | 'CallLogForm' | 'CallLogConvertTicket' | 'Leads' | 'LeadDetail' | 'LeadForm' | 'CardScan' | 'LeadActivityForm' | 'Attendance' | 'Notifications' | 'TeamManagement' | 'Campaigns' | 'CampaignDetail' | 'CampaignForm' | 'EmailCampaigns' | 'EmailCampaignDetail' | 'EmailCampaignForm' | 'Profile' | 'ProfileEdit' | 'Payslips'>;
 export type ProductsStackParams = { ProductList: undefined; ProductDetail: { id: string } };
 
 /** The MD / CEO role's own screens — Home, the Sales Report family, Top Employees, Target Achievement, Sales Pipeline,
@@ -377,6 +384,10 @@ function MoreNavigator() {
       <MoreStack.Screen name="B2CCaseDetail" component={B2CCaseDetailScreen} options={({ route }) => ({ title: route.params.caseNo })} />
       <MoreStack.Screen name="Discoms" component={DiscomsScreen} options={{ title: 'Discom Master' }} />
       <MoreStack.Screen name="DiscomForm" component={DiscomFormScreen} options={{ title: 'Add Discom' }} />
+      <MoreStack.Screen name="Profile" component={ProfileScreen} options={{ title: 'My Profile' }} />
+      <MoreStack.Screen name="ProfileEdit" component={ProfileEditScreen} options={{ title: 'Edit My Profile' }} />
+      <MoreStack.Screen name="Payslips" component={PayslipsScreen} options={{ title: 'My Payslips' }} />
+      <MoreStack.Screen name="MyAssets" component={MyAssetsScreen} options={{ title: 'My Assets' }} />
     </MoreStack.Navigator>
   );
 }
@@ -422,6 +433,9 @@ function SalesNavigator() {
       <SalesStack.Screen name="ReportViewer" component={ReportViewerScreen} options={({ route }) => ({ title: route.params.title })} />
       <SalesStack.Screen name="Chat" component={ChatScreen} options={{ title: 'Chat' }} />
       <SalesStack.Screen name="ChatThread" component={ChatThreadScreen} options={({ route }) => ({ title: route.params.name })} />
+      <SalesStack.Screen name="Profile" component={ProfileScreen} options={{ title: 'My Profile' }} />
+      <SalesStack.Screen name="ProfileEdit" component={ProfileEditScreen} options={{ title: 'Edit My Profile' }} />
+      <SalesStack.Screen name="Payslips" component={PayslipsScreen} options={{ title: 'My Payslips' }} />
     </SalesStack.Navigator>
   );
 }
@@ -555,6 +569,8 @@ function ServiceEngineerProfileNavigator() {
   return (
     <ServiceEngineerProfileStack.Navigator screenOptions={header}>
       <ServiceEngineerProfileStack.Screen name="ServiceEngineerProfile" component={ServiceEngineerProfileScreen} options={{ title: 'Profile' }} />
+      <ServiceEngineerProfileStack.Screen name="ProfileEdit" component={ProfileEditScreen} options={{ title: 'Edit My Profile' }} />
+      <ServiceEngineerProfileStack.Screen name="Payslips" component={PayslipsScreen} options={{ title: 'My Payslips' }} />
     </ServiceEngineerProfileStack.Navigator>
   );
 }
