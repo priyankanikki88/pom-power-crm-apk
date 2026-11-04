@@ -78,7 +78,17 @@ export async function flushFieldPings(): Promise<void> {
   while (pending.length > 0) {
     const batch = pending.slice(0, MAX_BATCH);
     try {
-      await api.post('/field-activity/pings', { pings: batch });
+      const res = await api.post<{ stored: number; trackingDisabled?: boolean }>('/field-activity/pings', { pings: batch });
+      // HR switched background tracking off for this employee: stop the trail and drop what is queued.
+      if (res?.trackingDisabled) {
+        saveQueue([]);
+        try {
+          if (await Location.hasStartedLocationUpdatesAsync(FIELD_TRACKING_TASK)) await Location.stopLocationUpdatesAsync(FIELD_TRACKING_TASK);
+        } catch {
+          // already stopped
+        }
+        return;
+      }
     } catch (err) {
       // A bad batch (e.g. every ping unparsable) is dropped rather than retried forever; offline / server errors stay queued.
       if (!(err instanceof ApiError) || err.status === 0 || err.status >= 500) return;

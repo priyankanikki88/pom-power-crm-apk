@@ -87,6 +87,11 @@ export function MoreScreen({ navigation }: NativeStackScreenProps<MoreStackParam
           <Button title="Team Attendance" variant="secondary" onPress={() => navigation.navigate('AttendanceBoard')} />
         </View>
       ) : null}
+      {hasPermission('attendance.approve') || hasPermission('attendance.manage') ? (
+        <View style={styles.link}>
+          <Button title="Attendance Approvals" variant="secondary" onPress={() => navigation.navigate('AttendanceApprovals')} />
+        </View>
+      ) : null}
       {hasPermission('team.view') ? (
         <View style={styles.link}>
           <Button title="My Team" variant="secondary" onPress={() => navigation.navigate('TeamManagement')} />

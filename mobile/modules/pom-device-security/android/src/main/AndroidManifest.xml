@@ -1,0 +1,4 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+  <!-- Office Wi-Fi check for verified attendance: which access point the phone is connected to. -->
+  <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
+</manifest>

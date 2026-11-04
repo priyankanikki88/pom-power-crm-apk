@@ -8,6 +8,7 @@ import { formatDate } from '../lib/dates';
 import { enumLabel } from '../lib/format';
 import { getPunchLocation, startFieldTracking, stopFieldTracking, type PunchLocation } from '../lib/location';
 import { colors, space } from '../theme';
+import { useVerifiedStatus, VerifiedPunchCard } from './VerifiedPunchCard';
 
 interface Today {
   date: string;
@@ -67,12 +68,18 @@ export function AttendanceScreen() {
   const [error, setError] = useState<string | null>(null);
   const [note, setNote] = useState<string | null>(null);
   const t = today.data;
+  // Verified attendance (location + live selfie + registered phone), when HR has switched it on: it replaces the simple
+  // Mark Attendance below. An older server without it answers 404 and the screen stays as before.
+  const verifiedStatus = useVerifiedStatus();
+  const verified = verifiedStatus.data && verifiedStatus.data.verificationMode !== 'OFF' ? verifiedStatus.data : null;
+  const trackingAllowed = verifiedStatus.data?.switches.backgroundTracking !== false;
 
   // Safety net for a punch-in that happened in an earlier app session (e.g. the phone restarted): resumes the
-  // background trail rather than leaving the rest of the day untracked. A no-op if it is already running.
+  // background trail rather than leaving the rest of the day untracked. A no-op if it is already running. Never when HR
+  // has switched background tracking off for this employee.
   useEffect(() => {
-    if (t?.record?.punchInAt && !t.record.punchOutAt) void startFieldTracking();
-  }, [t?.record?.punchInAt, t?.record?.punchOutAt]);
+    if (!verified && trackingAllowed && t?.record?.punchInAt && !t.record.punchOutAt) void startFieldTracking();
+  }, [verified, trackingAllowed, t?.record?.punchInAt, t?.record?.punchOutAt]);
 
   const refresh = () => {
     void qc.invalidateQueries({ queryKey: ['attendance'] });
@@ -125,7 +132,7 @@ export function AttendanceScreen() {
   const mark = () =>
     withLocation('mark', async (location) => {
       const result = await send('/attendance/mark', { ...(mode ? { workModeId: mode.id } : { kind }), remarks: remarks.trim() || undefined }, location);
-      await startFieldTracking();
+      if (trackingAllowed) await startFieldTracking();
       return result;
     });
   const punchOut = () =>
@@ -149,6 +156,7 @@ export function AttendanceScreen() {
           onRefresh={() => {
             void today.refetch();
             void month.refetch();
+            void verifiedStatus.refetch();
           }}
         />
       }
@@ -158,7 +166,9 @@ export function AttendanceScreen() {
       {error ? <ErrorBox message={error} /> : null}
       {note ? <Text style={styles.note}>{note}</Text> : null}
 
-      {t ? (
+      {verified ? <VerifiedPunchCard status={verified} onChanged={() => void verifiedStatus.refetch()} /> : null}
+
+      {t && !verified ? (
         <Card>
           <Text style={text.muted}>Today · {formatDate(t.date)}</Text>
           <Text style={[styles.big, { color: TONE[t.status] ?? colors.text }]}>{label(t.status)}</Text>

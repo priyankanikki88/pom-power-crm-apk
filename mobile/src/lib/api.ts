@@ -52,6 +52,9 @@ export async function setTokens(tokens: { accessToken: string; refreshToken: str
 
 export const currentRefreshToken = () => refreshToken;
 
+/** The Authorization header for a native request the api helpers do not make (an <Image> of a protected photo). */
+export const authHeaders = (): Record<string, string> => (accessToken ? { Authorization: `Bearer ${accessToken}` } : {});
+
 /** The server records which kind of client a session came from (the web app sends "web" / "app"). */
 const CLIENT = 'app';
 
@@ -169,6 +172,30 @@ export async function uploadFile<T>(path: string, file: { uri: string; name: str
   if (!res.ok) {
     const raw = typeof payload === 'object' && payload && 'message' in payload ? (payload as { message: unknown }).message : res.statusText;
     throw new ApiError(res.status, Array.isArray(raw) ? raw.join('\n') : String(raw || 'Upload failed'), payload);
+  }
+  return payload as T;
+}
+
+/**
+ * Posts text fields plus any number of named local files as one multipart request (e.g. an attendance punch: the selfie
+ * and an optional site photo). Same error handling and token refresh as uploadFile.
+ */
+export async function postFiles<T>(path: string, fields: Record<string, string | undefined>, files: Array<{ field: string; uri: string; name: string; type: string }>, retry = true): Promise<T> {
+  const form = new FormData();
+  for (const [k, v] of Object.entries(fields)) if (v !== undefined) form.append(k, v);
+  for (const f of files) form.append(f.field, { uri: f.uri, name: f.name, type: f.type } as unknown as Blob);
+  let res: Response;
+  try {
+    res = await fetch(`${API_BASE}${path}`, { method: 'POST', headers: { 'X-Client': CLIENT, ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}) }, body: form });
+  } catch {
+    throw new ApiError(0, 'No internet connection, or the server could not be reached.');
+  }
+  if (res.status === 401 && retry && refreshToken && (await tryRefresh())) return postFiles<T>(path, fields, files, false);
+  const contentType = res.headers.get('content-type') ?? '';
+  const payload: unknown = contentType.includes('application/json') ? await res.json() : await res.text();
+  if (!res.ok) {
+    const raw = typeof payload === 'object' && payload && 'message' in payload ? (payload as { message: unknown }).message : res.statusText;
+    throw new ApiError(res.status, Array.isArray(raw) ? raw.join('\n') : String(raw || 'Request failed'), payload);
   }
   return payload as T;
 }

@@ -9,6 +9,7 @@ import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-nati
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from './auth/AuthContext';
 import { api } from './lib/api';
+import { AttendanceApprovalsScreen } from './screens/AttendanceApprovalsScreen';
 import { AttendanceBoardScreen } from './screens/AttendanceBoardScreen';
 import { AttendanceScreen } from './screens/AttendanceScreen';
 import { MyServiceJobsScreen } from './screens/MyServiceJobsScreen';
@@ -130,6 +131,7 @@ export type MoreStackParams = {
   Leave: undefined;
   LeaveForm: undefined;
   AttendanceBoard: undefined;
+  AttendanceApprovals: undefined;
   TeamManagement: undefined;
   Campaigns: undefined;
   CampaignDetail: { id: string; name: string };
@@ -353,6 +355,7 @@ function MoreNavigator() {
       <MoreStack.Screen name="Leave" component={LeaveScreen} options={{ title: 'Leave' }} />
       <MoreStack.Screen name="LeaveForm" component={LeaveFormScreen} options={{ title: 'Apply for Leave' }} />
       <MoreStack.Screen name="AttendanceBoard" component={AttendanceBoardScreen} options={{ title: 'Team Attendance' }} />
+      <MoreStack.Screen name="AttendanceApprovals" component={AttendanceApprovalsScreen} options={{ title: 'Attendance Approvals' }} />
       <MoreStack.Screen name="TeamManagement" component={TeamManagementScreen} options={{ title: 'My Team' }} />
       <MoreStack.Screen name="Campaigns" component={CampaignsScreen} options={{ title: 'Marketing Campaigns' }} />
       <MoreStack.Screen name="CampaignDetail" component={CampaignDetailScreen} options={({ route }) => ({ title: route.params.name })} />
