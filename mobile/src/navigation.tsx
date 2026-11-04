@@ -59,6 +59,8 @@ import { ServiceEngineerHomeScreen } from './screens/ServiceEngineerHomeScreen';
 import { ServiceEngineerDashboardScreen } from './screens/ServiceEngineerDashboardScreen';
 import { ServiceEngineerProfileScreen } from './screens/ServiceEngineerProfileScreen';
 import { ProfileEditScreen, ProfileScreen } from './screens/ProfileScreens';
+import { ProfileApprovalsScreen } from './screens/ProfileApprovalsScreen';
+import { BranchStampsScreen } from './screens/BranchStampsScreen';
 import { PayslipsScreen } from './screens/PayslipsScreen';
 import { MyAssetsScreen } from './screens/MyAssetsScreen';
 import { SparePartsFormScreen, SparePartsScreen } from './screens/SparePartsScreen';
@@ -179,6 +181,8 @@ export type MoreStackParams = {
   ProfileEdit: undefined;
   Payslips: undefined;
   MyAssets: undefined;
+  ProfileApprovals: undefined;
+  BranchStamps: undefined;
 };
 
 /**
@@ -237,6 +241,7 @@ export type HrStackParams = {
   HrEmployeeDetail: { id: string; name: string };
   HrAttendance: undefined;
   HrApprovals: undefined;
+  ProfileApprovals: undefined;
   JobOpenings: undefined;
   JobOpeningDetail: { id: string; title: string };
   JobOpeningForm: { id?: string } | undefined;
@@ -391,6 +396,8 @@ function MoreNavigator() {
       <MoreStack.Screen name="ProfileEdit" component={ProfileEditScreen} options={{ title: 'Edit My Profile' }} />
       <MoreStack.Screen name="Payslips" component={PayslipsScreen} options={{ title: 'My Payslips' }} />
       <MoreStack.Screen name="MyAssets" component={MyAssetsScreen} options={{ title: 'My Assets' }} />
+      <MoreStack.Screen name="ProfileApprovals" component={ProfileApprovalsScreen} options={{ title: 'Profile Approvals' }} />
+      <MoreStack.Screen name="BranchStamps" component={BranchStampsScreen} options={{ title: 'Branch Stamps' }} />
     </MoreStack.Navigator>
   );
 }
@@ -729,6 +736,7 @@ function HrHomeNavigator() {
     <HrHomeStack.Navigator screenOptions={header}>
       <HrHomeStack.Screen name="HrHome" component={HrHomeScreen} options={{ title: 'Home' }} />
       <HrHomeStack.Screen name="HrApprovals" component={HrApprovalsScreen} options={{ title: 'Approval Center' }} />
+      <HrHomeStack.Screen name="ProfileApprovals" component={ProfileApprovalsScreen} options={{ title: 'Profile Approvals' }} />
       <HrHomeStack.Screen name="JobOpenings" component={JobOpeningsScreen} options={{ title: 'Recruitment' }} />
       <HrHomeStack.Screen name="JobOpeningDetail" component={JobOpeningDetailScreen} options={({ route }) => ({ title: route.params.title })} />
       <HrHomeStack.Screen name="JobOpeningForm" component={JobOpeningFormScreen} options={({ route }) => ({ title: route.params?.id ? 'Edit Opening' : 'New Job Opening' })} />

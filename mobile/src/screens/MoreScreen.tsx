@@ -92,6 +92,16 @@ export function MoreScreen({ navigation }: NativeStackScreenProps<MoreStackParam
           <Button title="Attendance Approvals" variant="secondary" onPress={() => navigation.navigate('AttendanceApprovals')} />
         </View>
       ) : null}
+      {hasPermission('employee.profile.review') ? (
+        <View style={styles.link}>
+          <Button title="Profile Approvals" variant="secondary" onPress={() => navigation.navigate('ProfileApprovals')} />
+        </View>
+      ) : null}
+      {hasPermission('branch.manage') ? (
+        <View style={styles.link}>
+          <Button title="Branch Stamps" variant="secondary" onPress={() => navigation.navigate('BranchStamps')} />
+        </View>
+      ) : null}
       {hasPermission('team.view') ? (
         <View style={styles.link}>
           <Button title="My Team" variant="secondary" onPress={() => navigation.navigate('TeamManagement')} />

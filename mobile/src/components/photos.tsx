@@ -5,8 +5,12 @@ import { ApiError, downloadToCache, uploadFile } from '../lib/api';
 import { colors, radius, space } from '../theme';
 import { Button, ErrorBox, Field } from './ui';
 
-/** A photo that sits behind the login: downloaded once into the app cache with the user's token, then shown from there. */
-export function AuthImage({ path, cacheName }: { path: string; cacheName: string }) {
+/**
+ * A photo that sits behind the login: downloaded once into the app cache with the user's token, then shown from there.
+ * `contain` shows the whole image on white (a signature or stamp) instead of a cropped photo; `missing` replaces the
+ * "not available" text when the image may simply not exist yet.
+ */
+export function AuthImage({ path, cacheName, contain, missing }: { path: string; cacheName: string; contain?: boolean; missing?: string }) {
   const [uri, setUri] = useState<string | null>(null);
   const [failed, setFailed] = useState(false);
   useEffect(() => {
@@ -18,9 +22,10 @@ export function AuthImage({ path, cacheName }: { path: string; cacheName: string
       live = false;
     };
   }, [path, cacheName]);
-  if (failed) return <View style={[styles.thumb, styles.center]}><Text style={styles.muted}>Photo not available</Text></View>;
-  if (!uri) return <View style={[styles.thumb, styles.center]}><ActivityIndicator color={colors.primary} /></View>;
-  return <Image source={{ uri }} style={styles.thumb} resizeMode="cover" accessibilityIgnoresInvertColors />;
+  const box = contain ? [styles.thumb, styles.contain] : styles.thumb;
+  if (failed) return <View style={[box, styles.center]}><Text style={styles.muted}>{missing ?? 'Photo not available'}</Text></View>;
+  if (!uri) return <View style={[box, styles.center]}><ActivityIndicator color={colors.primary} /></View>;
+  return <Image source={{ uri }} style={box} resizeMode={contain ? 'contain' : 'cover'} accessibilityIgnoresInvertColors />;
 }
 
 /**
@@ -82,5 +87,6 @@ const styles = StyleSheet.create({
   adder: { marginTop: space.md },
   center: { alignItems: 'center', justifyContent: 'center', gap: space.xs, padding: space.sm },
   thumb: { width: '100%', height: 190, borderRadius: radius.md, backgroundColor: '#eef1f6' },
+  contain: { height: 120, backgroundColor: '#fff', borderWidth: 1, borderColor: colors.border },
   muted: { fontSize: 12.5, color: colors.muted },
 });

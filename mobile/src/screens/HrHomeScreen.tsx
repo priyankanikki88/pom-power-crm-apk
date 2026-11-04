@@ -64,6 +64,7 @@ export function HrHomeScreen() {
 
       {[
         { screen: 'HrApprovals', label: 'Approval Center' },
+        { screen: 'ProfileApprovals', label: 'Profile & Signature Approvals' },
         { screen: 'JobOpenings', label: 'Recruitment' },
         { screen: 'TrainingSessions', label: 'Training & Development' },
         { screen: 'Appraisals', label: 'Performance & Appraisal' },
